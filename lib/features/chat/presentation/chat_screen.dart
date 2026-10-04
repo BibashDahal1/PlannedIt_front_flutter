@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/realtime/notification_inbox_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/chat_providers.dart';
@@ -17,9 +18,12 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   ChatSocketService? _socketService;
+  StreamSubscription<bool>? _connectionSubscription;
+  StreamSubscription<ChatMessage>? _messageSubscription;
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
+  final Set<String> _messageIds = {};
   final List<String> _pendingMessages = [];
 
   bool _isLoadingHistory = true;
@@ -28,21 +32,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       false; // debounced -- only true after a sustained drop
   Timer? _connectingBannerDebounce;
   String? _loadError;
+  bool _isActive = true;
+  bool _isInitializing = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(notificationInboxProvider.notifier).openChat(widget.groupId);
+      }
+    });
     _init();
   }
 
   Future<void> _init() async {
+    if (_isInitializing) return;
+    _isInitializing = true;
     try {
       final history = await ref
           .read(chatApiProvider)
           .fetchMessages(widget.groupId);
-      if (!mounted) return;
+      if (!mounted || !_isActive) return;
       setState(() {
-        _messages.addAll(history); // already oldest-first per API
+        _mergeMessages(history);
         _isLoadingHistory = false;
       });
       _scrollToBottom();
@@ -52,41 +65,86 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         chatApi: ref.read(chatApiProvider),
       );
       _socketService = service;
-
-      service.connectionState.listen((connected) {
-        if (!mounted) return;
-        setState(() => _isSocketReady = connected);
-        _connectingBannerDebounce?.cancel();
-        if (connected) {
-          setState(() => _showConnectingBanner = false);
-          _flushPendingMessages();
-        } else {
-          // Only show the banner if the drop lasts more than ~700ms --
-          // this is what stops a fast, expected reconnect (e.g. the
-          // proactive token refresh) from ever flashing anything.
-          _connectingBannerDebounce = Timer(
-            const Duration(milliseconds: 700),
-            () {
-              if (mounted && !_isSocketReady)
-                setState(() => _showConnectingBanner = true);
-            },
-          );
-        }
-      });
-      service.messages.listen((message) {
-        if (!mounted) return;
-        setState(() => _messages.add(message));
-        _scrollToBottom();
-      });
+      _listenToSocket(service);
 
       await service.connect();
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || !_isActive) return;
       setState(() {
         _isLoadingHistory = false;
         _loadError = e.toString();
       });
+    } finally {
+      _isInitializing = false;
     }
+  }
+
+  void _listenToSocket(ChatSocketService service) {
+    _connectionSubscription?.cancel();
+    _messageSubscription?.cancel();
+    _isSocketReady = service.isConnected;
+
+    _connectionSubscription = service.connectionState.listen((connected) {
+      if (!mounted || !_isActive) return;
+      setState(() {
+        _isSocketReady = connected;
+        if (connected) _showConnectingBanner = false;
+      });
+      _connectingBannerDebounce?.cancel();
+      if (connected) {
+        _flushPendingMessages();
+      } else {
+        // Avoid rebuilding while a keyed route/widget is being deactivated.
+        _connectingBannerDebounce = Timer(
+          const Duration(milliseconds: 700),
+          () {
+            if (!mounted || !_isActive || _isSocketReady) return;
+            setState(() => _showConnectingBanner = true);
+          },
+        );
+      }
+    });
+
+    _messageSubscription = service.messages.listen((message) {
+      if (!mounted || !_isActive) return;
+      var added = false;
+      setState(() => added = _mergeMessages([message]));
+      if (added) _scrollToBottom();
+    });
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    _isActive = true;
+    final service = _socketService;
+    if (service != null) _listenToSocket(service);
+    if (service == null && _isLoadingHistory) _init();
+  }
+
+  @override
+  void deactivate() {
+    _isActive = false;
+    _connectingBannerDebounce?.cancel();
+    _connectionSubscription?.cancel();
+    _messageSubscription?.cancel();
+    _connectionSubscription = null;
+    _messageSubscription = null;
+    super.deactivate();
+  }
+
+  bool _mergeMessages(Iterable<ChatMessage> incoming) {
+    var changed = false;
+    for (final message in incoming) {
+      if (_messageIds.add(message.id)) {
+        _messages.add(message);
+        changed = true;
+      }
+    }
+    if (changed) {
+      _messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    }
+    return changed;
   }
 
   void _flushPendingMessages() {
@@ -101,7 +159,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (mounted && _isActive && _scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 250),
@@ -117,6 +175,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   /// connection is back, rather than the person losing it or being
   /// blocked from typing.
   void _send() {
+    if (!mounted || !_isActive) return;
     final content = _messageController.text.trim();
     if (content.isEmpty) return;
     _messageController.clear();
@@ -139,7 +198,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   void dispose() {
+    ref.read(notificationInboxProvider.notifier).closeChat(widget.groupId);
     _connectingBannerDebounce?.cancel();
+    _connectionSubscription?.cancel();
+    _messageSubscription?.cancel();
     _socketService?.dispose();
     _messageController.dispose();
     _scrollController.dispose();

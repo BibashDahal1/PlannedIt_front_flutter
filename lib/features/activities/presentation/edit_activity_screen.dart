@@ -7,9 +7,11 @@ import '../../places/presentation/location_picker_screen.dart';
 import '../data/activities_providers.dart';
 import '../domain/activity_post.dart';
 import '../domain/update_activity_input.dart';
+import '../../groups/data/groups_providers.dart';
 
 class EditActivityScreen extends ConsumerStatefulWidget {
   final ActivityPost activity;
+  final String? groupId;
 
   /// Best-known location. Only safe to resend to the server when
   /// `isExact` is true; a rounded one would degrade the stored point.
@@ -19,6 +21,7 @@ class EditActivityScreen extends ConsumerStatefulWidget {
     super.key,
     required this.activity,
     required this.location,
+    this.groupId,
   });
 
   @override
@@ -34,6 +37,7 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
   late double _lng;
   bool _pinMoved = false;
   bool _isSaving = false;
+  late bool _costSharingEnabled;
 
   bool get _canEditLocation => widget.location.isExact;
 
@@ -46,6 +50,7 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
   void initState() {
     super.initState();
     final a = widget.activity;
+    _costSharingEnabled = a.costSharingEnabled;
     _titleController = TextEditingController(text: a.title);
     _descriptionController = TextEditingController(text: a.description ?? '');
     _venueController = TextEditingController(
@@ -104,6 +109,10 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
       final input = UpdateActivityInput(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
+        costSharingEnabled:
+            _costSharingEnabled == widget.activity.costSharingEnabled
+            ? null
+            : _costSharingEnabled,
         location: sendLocation
             ? (
                 latitude: _lat,
@@ -137,6 +146,19 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final expensesAsync = widget.groupId == null
+        ? null
+        : ref.watch(groupExpensesProvider(widget.groupId!));
+    final hasExpenses = expensesAsync?.maybeWhen(
+      data: (expenses) => expenses.isNotEmpty,
+      orElse: () => false,
+    );
+    final canDisableCostSharing =
+        !_costSharingEnabled ||
+        (widget.groupId != null &&
+            expensesAsync?.hasValue == true &&
+            hasExpenses == false);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Activity')),
       body: ListView(
@@ -151,6 +173,38 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
             controller: _descriptionController,
             decoration: const InputDecoration(labelText: 'Description'),
             maxLines: 3,
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Enable shared costs'),
+            subtitle: Text(
+              _costSharingEnabled && hasExpenses == true
+                  ? 'Shared expenses already exist, so cost sharing cannot be disabled.'
+                  : _costSharingEnabled && widget.groupId == null
+                  ? 'Cost sharing cannot be disabled unless the group expenses can be checked.'
+                  : _costSharingEnabled && expensesAsync?.hasError == true
+                  ? 'Could not verify expenses. Retry before disabling cost sharing.'
+                  : _costSharingEnabled &&
+                        expensesAsync != null &&
+                        !expensesAsync.hasValue
+                  ? 'Checking existing expenses before allowing cost sharing to be disabled.'
+                  : 'Let group members record and split activity expenses.',
+            ),
+            value: _costSharingEnabled,
+            secondary: expensesAsync?.hasError == true
+                ? IconButton(
+                    tooltip: 'Retry loading expenses',
+                    onPressed: () => ref.invalidate(
+                      groupExpensesProvider(widget.groupId!),
+                    ),
+                    icon: const Icon(Icons.refresh),
+                  )
+                : null,
+            onChanged: canDisableCostSharing
+                ? (enabled) =>
+                      setState(() => _costSharingEnabled = enabled)
+                : null,
           ),
           const SizedBox(height: 20),
           Text('Location', style: Theme.of(context).textTheme.titleMedium),

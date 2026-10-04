@@ -11,6 +11,7 @@ class CreateActivityInput {
   final String? description;
   final int totalSpotsNeeded;
   final int? teamSize;
+  final bool costSharingEnabled;
   final DateTime scheduledStart;
   final DateTime scheduledEnd;
   final String
@@ -28,6 +29,7 @@ class CreateActivityInput {
     this.description,
     required this.totalSpotsNeeded,
     this.teamSize,
+    this.costSharingEnabled = false,
     required this.scheduledStart,
     required this.scheduledEnd,
     this.visibility = 'public',
@@ -46,6 +48,7 @@ class CreateActivityInput {
     if (description != null) 'description': description,
     'total_spots_needed': totalSpotsNeeded,
     if (teamSize != null) 'team_size': teamSize,
+    'cost_sharing_enabled': costSharingEnabled,
     'scheduled_start': scheduledStart.toUtc().toIso8601String(),
     'scheduled_end': scheduledEnd.toUtc().toIso8601String(),
     'visibility': visibility,

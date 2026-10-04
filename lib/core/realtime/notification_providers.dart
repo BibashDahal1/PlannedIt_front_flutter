@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/data/auth_providers.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/activities/data/activities_providers.dart';
+import '../../features/groups/data/groups_providers.dart';
 import '../../features/join_requests/data/join_requests_providers.dart';
 import 'activity_group_link.dart';
 import 'notification_event.dart';
@@ -58,6 +59,12 @@ class ActivityGroupLinks extends Notifier<Map<String, ActivityGroupLink>> {
             }
             break;
           case 'request_accepted':
+            ref.invalidate(myGroupsProvider);
+            ref.invalidate(myJoinRequestsProvider);
+            if (event.activityId != null) {
+              ref.invalidate(activityDetailProvider(event.activityId!));
+            }
+            break;
           case 'request_declined':
             ref.invalidate(myJoinRequestsProvider);
             if (event.activityId != null) {
@@ -65,9 +72,25 @@ class ActivityGroupLinks extends Notifier<Map<String, ActivityGroupLink>> {
             }
             break;
           case 'roster_updated':
+            ref.invalidate(myGroupsProvider);
             ref.invalidate(myActivitiesProvider);
             break;
+          case 'teams_updated':
+            ref.invalidate(myGroupsProvider);
+            if (event.groupId != null) {
+              ref.invalidate(groupRosterProvider(event.groupId!));
+            }
+            break;
+          case 'expense_added':
+          case 'expense_updated':
+          case 'expense_deleted':
+            if (event.groupId != null) {
+              ref.invalidate(groupRosterProvider(event.groupId!));
+              ref.invalidate(groupExpensesProvider(event.groupId!));
+            }
+            break;
           case 'activity_deleted':
+            ref.invalidate(myGroupsProvider);
             ref.invalidate(myActivitiesProvider);
             ref.invalidate(myJoinRequestsProvider);
             ref.invalidate(activityFeedProvider(null));
@@ -85,6 +108,21 @@ class ActivityGroupLinks extends Notifier<Map<String, ActivityGroupLink>> {
         }
       });
     });
+    ref.listen(myJoinRequestsProvider, (previous, next) {
+      next.whenData((requests) {
+        for (final request in requests) {
+          if (request.status == 'accepted' &&
+              request.activityPostId != null &&
+              request.groupId != null) {
+            _add(
+              request.activityPostId!,
+              request.groupId!,
+              request.activityTitle,
+            );
+          }
+        }
+      });
+    });
     return {};
   }
 
@@ -99,7 +137,7 @@ class ActivityGroupLinks extends Notifier<Map<String, ActivityGroupLink>> {
           ActivityGroupLink.fromJson(value as Map<String, dynamic>),
         ),
       );
-      state = decoded;
+      state = {...decoded, ...state};
     } catch (_) {
       // No stored links yet -- starts empty, which is fine.
     }
@@ -129,6 +167,12 @@ class ActivityGroupLinks extends Notifier<Map<String, ActivityGroupLink>> {
       _resolveTitleInBackground(activityId, groupId);
     }
   }
+
+  void recordGroupLink(
+    String activityId,
+    String groupId,
+    String? activityTitle,
+  ) => _add(activityId, groupId, activityTitle);
 
   Future<void> _resolveTitleInBackground(
     String activityId,

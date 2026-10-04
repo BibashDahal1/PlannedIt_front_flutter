@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../realtime/notification_inbox_provider.dart';
 import '../realtime/notification_providers.dart';
 
 final rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -14,6 +15,7 @@ class AppNotificationsGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(notificationConnectionManagerProvider);
+    ref.listen(notificationInboxProvider, (previous, next) {});
     ref.listen(notificationEventsProvider, (previous, next) {
       next.whenData((event) {
         rootScaffoldMessengerKey.currentState?.showSnackBar(

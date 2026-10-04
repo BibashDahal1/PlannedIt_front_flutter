@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/realtime/notification_inbox_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/sketch_colors.dart';
 import '../../../core/widgets/sketch_box.dart';
@@ -39,6 +40,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     ref.watch(themeModeProvider);
     final authState = ref.watch(authControllerProvider);
+    final unreadNotificationCount = ref.watch(
+      notificationInboxProvider.select(
+        (inbox) => inbox.unreadNotificationCount,
+      ),
+    );
     final categoriesAsync = ref.watch(categoriesProvider);
     final selectedCategory = ref.watch(selectedCategoryFilterProvider);
     final feedAsync = ref.watch(activityFeedProvider(selectedCategory));
@@ -54,7 +60,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             children: [
-              _buildHeader(context, authState),
+              _buildHeader(context, authState, unreadNotificationCount),
               const SizedBox(height: 18),
               _buildSearchBar(),
               const SizedBox(height: 20),
@@ -140,7 +146,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, AsyncValue authState) {
+  Widget _buildHeader(
+    BuildContext context,
+    AsyncValue authState,
+    int unreadNotificationCount,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -162,11 +172,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           data: (state) => state.isLoggedIn
               ? Row(
                   children: [
-                    GestureDetector(
-                      onTap: () => context.push('/dashboard'),
-                      child: const Padding(
-                        padding: EdgeInsets.only(right: 14, top: 4),
-                        child: SketchIcon('bell', size: 34),
+                    IconButton(
+                      tooltip: 'Notifications',
+                      onPressed: () => context.push('/notifications'),
+                      padding: const EdgeInsets.only(right: 14, top: 4),
+                      constraints: const BoxConstraints(),
+                      icon: Badge(
+                        isLabelVisible: unreadNotificationCount > 0,
+                        label: Text(
+                          unreadNotificationCount > 99
+                              ? '99+'
+                              : '$unreadNotificationCount',
+                        ),
+                        child: const SketchIcon('bell', size: 34),
                       ),
                     ),
                     GestureDetector(

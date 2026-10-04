@@ -255,6 +255,29 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                       '${activity.totalSpotsNeeded} spots needed'
                       '${activity.teamSize != null ? ' · team size ${activity.teamSize}' : ''}',
                 ),
+                _DetailRow(
+                  icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                  label: activity.costSharingEnabled
+                      ? 'Shared costs enabled'
+                      : 'Shared costs disabled',
+                ),
+                if (isHost && !activity.costSharingEnabled)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: const Text('Enable shared costs'),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => EditActivityScreen(
+                            activity: activity,
+                            location: displayLocation,
+                            groupId: groupLink?.groupId,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (activity.minVerificationTier != null)
                   _DetailRow(
                     icon: const Icon(
@@ -336,6 +359,7 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                           builder: (_) => EditActivityScreen(
                             activity: activity,
                             location: displayLocation,
+                            groupId: groupLink?.groupId,
                           ),
                         ),
                       ),

@@ -31,6 +31,7 @@ class _PostActivityScreenState extends ConsumerState<PostActivityScreen> {
   DateTime? _endDateTime;
   String _visibility = 'public';
   String _minTier = 'basic';
+  bool _costSharingEnabled = false;
   bool _isSubmitting = false;
 
   @override
@@ -109,6 +110,7 @@ class _PostActivityScreenState extends ConsumerState<PostActivityScreen> {
       _endDateTime = null;
       _visibility = 'public';
       _minTier = 'basic';
+      _costSharingEnabled = false;
     });
   }
 
@@ -156,6 +158,7 @@ class _PostActivityScreenState extends ConsumerState<PostActivityScreen> {
       scheduledEnd: _endDateTime!,
       visibility: _visibility,
       minVerificationTier: _minTier,
+      costSharingEnabled: _costSharingEnabled,
     );
 
     setState(() => _isSubmitting = true);
@@ -375,6 +378,17 @@ class _PostActivityScreenState extends ConsumerState<PostActivityScreen> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Enable shared costs'),
+              subtitle: const Text(
+                'Off by default. Enable this to let group members add and split expenses.',
+              ),
+              value: _costSharingEnabled,
+              onChanged: (enabled) =>
+                  setState(() => _costSharingEnabled = enabled),
             ),
             const SizedBox(height: 20),
             DropdownButtonFormField<String>(

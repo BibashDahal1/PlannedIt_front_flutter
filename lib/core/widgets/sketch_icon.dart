@@ -180,3 +180,40 @@ class SketchIconSize {
   static const double tile = 36; // category tiles, markers
   static const double card = 40; // card icon boxes, header icons
 }
+
+/// For icons with baked-in pencil shading (gradients, crosshatch) --
+/// unlike SketchIcon, these are never re-tinted, since flattening them
+/// to one flat color would destroy the shading. A fixed light card
+/// sits behind the art so it stays legible on a dark background
+/// without altering the asset itself.
+class ShadedSketchIcon extends StatelessWidget {
+  final String asset;
+  final double size;
+  final EdgeInsetsGeometry padding;
+  const ShadedSketchIcon(
+    this.asset, {
+    super.key,
+    this.size = 28,
+    this.padding = const EdgeInsets.all(5),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: const BoxDecoration(
+        color: Color(
+          0xFFF6F3EC,
+        ), // fixed, not SketchColors.paper -- must stay light in both themes
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+      ),
+      child: Image.asset(
+        'assets/images/sketch/$asset.png',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+      ),
+    );
+  }
+}

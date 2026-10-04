@@ -4,6 +4,7 @@
 class UpdateActivityInput {
   final String? title;
   final String? description;
+  final bool? costSharingEnabled;
   final ({
     double latitude,
     double longitude,
@@ -12,12 +13,20 @@ class UpdateActivityInput {
   })?
   location;
 
-  const UpdateActivityInput({this.title, this.description, this.location});
+  const UpdateActivityInput({
+    this.title,
+    this.description,
+    this.location,
+    this.costSharingEnabled,
+  });
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
     if (title != null) json['title'] = title;
     if (description != null) json['description'] = description;
+    if (costSharingEnabled != null) {
+      json['cost_sharing_enabled'] = costSharingEnabled;
+    }
     if (location != null) {
       json['location'] = {
         'latitude': location!.latitude,

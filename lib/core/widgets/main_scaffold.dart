@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/groups/data/groups_providers.dart';
+import '../realtime/notification_inbox_provider.dart';
 import 'sketch_icon.dart';
 import '../theme/sketch_colors.dart';
 import '../theme/theme_mode_provider.dart';
@@ -27,6 +29,10 @@ class MainScaffold extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(themeModeProvider);
+    ref.watch(myGroupsProvider);
+    final unreadChatCount = ref.watch(
+      notificationInboxProvider.select((inbox) => inbox.unreadChatMessageCount),
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -56,6 +62,19 @@ class MainScaffold extends ConsumerWidget {
                           opacity: selected ? 1 : 0.45,
                           child: index == 2
                               ? const _PlusGlyph()
+                              : index == 3
+                              ? Badge(
+                                  isLabelVisible: unreadChatCount > 0,
+                                  label: Text(
+                                    unreadChatCount > 99
+                                        ? '99+'
+                                        : '$unreadChatCount',
+                                  ),
+                                  child: SketchIcon(
+                                    _tabs[index].asset as String,
+                                    size: 24,
+                                  ),
+                                )
                               : SketchIcon(
                                   _tabs[index].asset as String,
                                   size: 24,

@@ -14,6 +14,7 @@ class ActivityPost {
   final ActivityLocation location;
   final int totalSpotsNeeded;
   final int? teamSize;
+  final bool costSharingEnabled;
   final DateTime scheduledStart;
   final DateTime scheduledEnd;
   final String? visibility;
@@ -31,6 +32,7 @@ class ActivityPost {
     required this.location,
     required this.totalSpotsNeeded,
     this.teamSize,
+    this.costSharingEnabled = false,
     required this.scheduledStart,
     required this.scheduledEnd,
     this.visibility,
@@ -56,6 +58,7 @@ class ActivityPost {
     ),
     totalSpotsNeeded: json['total_spots_needed'] as int,
     teamSize: json['team_size'] as int?,
+    costSharingEnabled: json['cost_sharing_enabled'] as bool? ?? false,
     scheduledStart: DateTime.parse(json['scheduled_start'] as String).toLocal(),
     scheduledEnd: DateTime.parse(json['scheduled_end'] as String).toLocal(),
     visibility: json['visibility'] as String?,

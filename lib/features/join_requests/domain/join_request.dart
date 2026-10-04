@@ -8,6 +8,7 @@ class JoinRequest {
   final String id;
   final String? activityPostId;
   final String? activityTitle;
+  final String? groupId;
   final RequesterPreview? requester;
   final String? message;
   final String status;
@@ -18,6 +19,7 @@ class JoinRequest {
     required this.id,
     this.activityPostId,
     this.activityTitle,
+    this.groupId,
     this.requester,
     this.message,
     required this.status,
@@ -29,6 +31,7 @@ class JoinRequest {
     id: json['id'] as String,
     activityPostId: json['activity_post'] as String?,
     activityTitle: json['activity_title'] as String?,
+    groupId: json['group_id'] as String?,
     requester: json['requester'] != null
         ? RequesterPreview.fromJson(json['requester'] as Map<String, dynamic>)
         : null,

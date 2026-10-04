@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/realtime/notification_event.dart';
 import '../../../core/realtime/notification_providers.dart';
 import '../../../core/network/api_error.dart';
+import '../../groups/data/groups_providers.dart';
 import '../data/join_requests_providers.dart';
 import '../domain/join_request.dart';
 
@@ -54,27 +55,41 @@ class _IncomingRequestCardState extends ConsumerState<_IncomingRequestCard> {
   Future<void> _accept() async {
     setState(() => _isProcessing = true);
     try {
-      await ref
+      final activityId = widget.request.activityPostId;
+      final groupEventFuture = activityId == null
+          ? null
+          : ref
+                .read(notificationSocketServiceProvider)
+                .events
+                .firstWhere(
+                  (event) =>
+                      event.activityId == activityId && event.groupId != null,
+                  orElse: () => const NotificationEvent(event: 'timeout'),
+                )
+                .timeout(
+                  const Duration(seconds: 4),
+                  onTimeout: () => const NotificationEvent(event: 'timeout'),
+                );
+      final acceptedRequest = await ref
           .read(joinRequestsRepositoryProvider)
           .acceptJoinRequest(widget.request.id);
+        ref.invalidate(myGroupsProvider);
       widget.onHandled();
 
-      final activityId = widget.request.activityPostId;
-      if (activityId != null) {
-        final result = await ref
-            .read(notificationSocketServiceProvider)
-            .events
-            .firstWhere(
-              (e) => e.activityId == activityId && e.groupId != null,
-              orElse: () => const NotificationEvent(event: 'timeout'),
-            )
-            .timeout(
-              const Duration(seconds: 4),
-              onTimeout: () => const NotificationEvent(event: 'timeout'),
-            );
-        if (result.groupId != null && mounted) {
-          context.push('/group/${result.groupId}/chat');
+      final groupId =
+          acceptedRequest.groupId ??
+          (groupEventFuture == null ? null : (await groupEventFuture).groupId);
+      if (groupId != null && mounted) {
+        if (activityId != null) {
+          ref
+              .read(activityGroupLinksProvider.notifier)
+              .recordGroupLink(
+                activityId,
+                groupId,
+                acceptedRequest.activityTitle ?? widget.request.activityTitle,
+              );
         }
+        context.push('/group/$groupId/chat');
       }
     } catch (e) {
       if (mounted)

@@ -29,8 +29,8 @@ class NotificationSocketService {
     _subscription?.cancel();
     try {
       final uri = Uri.parse(
-        '${Env.wsBaseUrl}/ws/notifications/?token=$_currentToken',
-      );
+        '${Env.wsBaseUrl}/ws/notifications/',
+      ).replace(queryParameters: {'token': _currentToken});
       _channel = WebSocketChannel.connect(uri);
       _subscription = _channel!.stream.listen(
         (raw) {

@@ -8,6 +8,7 @@ class NotificationEvent {
   final String? groupId;
   final String? reason;
   final String? message;
+  final Map<String, dynamic>? chatMessage;
 
   const NotificationEvent({
     required this.event,
@@ -19,6 +20,7 @@ class NotificationEvent {
     this.groupId,
     this.reason,
     this.message,
+    this.chatMessage,
   });
 
   factory NotificationEvent.fromJson(Map<String, dynamic> json) =>
@@ -31,7 +33,10 @@ class NotificationEvent {
         requesterName: json['requester_name'] as String?,
         groupId: json['group_id'] as String?,
         reason: json['reason'] as String?,
-        message: json['message'] as String?,
+        message: json['message'] is String ? json['message'] as String : null,
+        chatMessage: json['message'] is Map
+            ? Map<String, dynamic>.from(json['message'] as Map)
+            : null,
       );
 
   String get displayMessage {
@@ -42,8 +47,21 @@ class NotificationEvent {
         return 'Your request for "$activityTitle" was accepted!';
       case 'request_declined':
         return 'Your request for "$activityTitle" was declined.';
+      case 'new_chat_message':
+        final senderName =
+            chatMessage?['sender_name'] as String? ?? 'New message';
+        final content = chatMessage?['content'] as String? ?? '';
+        return content.isEmpty ? senderName : '$senderName: $content';
       case 'roster_updated':
         return 'An activity you\'re in just got a roster update.';
+      case 'teams_updated':
+        return 'The activity host updated the teams.';
+      case 'expense_added':
+        return 'A shared expense was added.';
+      case 'expense_updated':
+        return 'A shared expense was updated.';
+      case 'expense_deleted':
+        return 'A shared expense was deleted.';
       case 'activity_cancelled':
         return '"$activityTitle" was cancelled by the host.';
       case 'activity_deleted':

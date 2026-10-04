@@ -26,7 +26,12 @@ class ApiEndpoints {
   static String joinRequestWithdraw(String id) => '/join-requests/$id/withdraw';
 
   // Groups
+  static const String myGroups = '/groups/mine';
   static String groupDetail(String id) => '/groups/$id';
+  static String groupTeams(String id) => '/groups/$id/teams';
+  static String groupExpenses(String id) => '/groups/$id/expenses';
+  static String groupExpense(String groupId, String expenseId) =>
+      '/groups/$groupId/expenses/$expenseId';
 
   // Trust / ratings / moderation
   static String activityComplete(String activityId) =>
