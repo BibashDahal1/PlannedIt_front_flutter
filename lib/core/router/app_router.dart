@@ -13,7 +13,6 @@ import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/auth/presentation/otp_verify_screen.dart';
 import '../../features/auth/domain/auth_flow_mode.dart';
 import '../../features/activities/presentation/activity_detail_screen.dart';
-import '../../features/join_requests/presentation/requests_screen.dart';
 import '../../features/join_requests/presentation/incoming_requests_screen.dart';
 import '../../features/trust/presentation/public_profile_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
@@ -57,10 +56,6 @@ final GoRouter appRouter = GoRouter(
       path: '/activity/:id/requests',
       builder: (context, state) =>
           IncomingRequestsScreen(activityId: state.pathParameters['id']!),
-    ),
-    GoRoute(
-      path: '/requests',
-      builder: (context, state) => const RequestsScreen(),
     ),
     GoRoute(
       path: '/profile/:userId/public',

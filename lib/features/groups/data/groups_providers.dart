@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/data/auth_providers.dart';
 import '../domain/group_roster.dart';
 import '../domain/group_summary.dart';
-import '../domain/group_expense.dart';
+import '../domain/group_expense_page.dart';
 import 'groups_api.dart';
 
 final groupsApiProvider = Provider(
@@ -20,7 +20,22 @@ final groupRosterProvider = FutureProvider.family<GroupRoster, String>((
   return ref.watch(groupsApiProvider).fetchGroup(groupId);
 });
 
+typedef GroupExpensesRequest = ({
+  String groupId,
+  int page,
+  int pageSize,
+});
+
 final groupExpensesProvider =
-    FutureProvider.family<List<GroupExpense>, String>((ref, groupId) {
-      return ref.watch(groupsApiProvider).fetchExpenses(groupId);
+    FutureProvider.family<GroupExpensePage, GroupExpensesRequest>((
+      ref,
+      request,
+    ) {
+      return ref
+          .watch(groupsApiProvider)
+          .fetchExpenses(
+            request.groupId,
+            page: request.page,
+            pageSize: request.pageSize,
+          );
     });

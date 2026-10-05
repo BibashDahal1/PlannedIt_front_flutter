@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_error.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/sketch_colors.dart';
 import '../../places/domain/place_result.dart';
 import '../../places/presentation/location_picker_screen.dart';
 import '../data/activities_providers.dart';
 import '../domain/create_activity_input.dart';
+import '../../../core/widgets/sketch_box.dart';
+import '../../../core/widgets/sketch_button.dart';
 import '../../../core/widgets/sketch_icon.dart';
 
 class PostActivityScreen extends ConsumerStatefulWidget {
@@ -187,262 +189,713 @@ class _PostActivityScreenState extends ConsumerState<PostActivityScreen> {
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(categoriesProvider);
-    const hintStyle = TextStyle(color: AppColors.textSecondary);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('Post Activity')),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
           children: [
-            FormField<int>(
-              validator: (_) =>
-                  _selectedCategoryId == null ? 'Pick a category' : null,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              builder: (field) => categoriesAsync.when(
-                loading: () => const LinearProgressIndicator(),
-                error: (e, _) => Text('Could not load categories: $e'),
-                data: (categories) {
-                  final matches = categories.where(
-                    (c) => c.id == _selectedCategoryId,
-                  );
-                  final selected = matches.isEmpty ? null : matches.first;
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () async {
-                      final pickedId = await showModalBottomSheet<int>(
-                        context: context,
-                        builder: (sheetContext) => SafeArea(
-                          child: ListView(
-                            shrinkWrap: true,
-                            children: categories
-                                .map(
-                                  (c) => ListTile(
-                                    leading: CategoryIcon(c.name, size: 22),
-                                    title: Text(c.name),
-                                    selected: c.id == _selectedCategoryId,
-                                    onTap: () =>
-                                        Navigator.of(sheetContext).pop(c.id),
-                                  ),
-                                )
-                                .toList(),
+            SketchBox(
+              seed: 70,
+              radius: 18,
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const SketchIcon('plus', size: 36),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Create an activity',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        Text(
+                          'Share your plan and find people to join.',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: SketchColors.inkFaint),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            _PostSectionHeading(
+              title: 'Activity details',
+              icon: const SketchIcon('calendar', size: 24),
+            ),
+            const SizedBox(height: 10),
+            SketchBox(
+              seed: 71,
+              radius: 18,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: [
+                  FormField<int>(
+                    validator: (_) =>
+                        _selectedCategoryId == null ? 'Pick a category' : null,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    builder: (field) => categoriesAsync.when(
+                      loading: () => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: SketchColors.ink,
+                            strokeWidth: 2,
                           ),
                         ),
-                      );
-                      if (pickedId != null) {
-                        setState(() => _selectedCategoryId = pickedId);
-                        field.didChange(pickedId);
-                      }
-                    },
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        labelText: 'Category',
-                        errorText: field.errorText,
-                        suffixIcon: const Icon(Icons.arrow_drop_down),
                       ),
-                      child: selected == null
-                          ? const Text(
-                              'Select a category',
-                              style: TextStyle(color: AppColors.textSecondary),
-                            )
-                          : Row(
+                      error: (e, _) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Could not load categories: ${extractApiErrorMessage(e)}',
+                            style: TextStyle(color: SketchColors.danger),
+                          ),
+                          const SizedBox(height: 8),
+                          SketchButton(
+                            label: 'Retry categories',
+                            icon: const Icon(Icons.refresh),
+                            onPressed: () => ref.invalidate(categoriesProvider),
+                          ),
+                        ],
+                      ),
+                      data: (categories) {
+                        final matches = categories.where(
+                          (c) => c.id == _selectedCategoryId,
+                        );
+                        final selected = matches.isEmpty ? null : matches.first;
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () async {
+                            final pickedId = await showModalBottomSheet<int>(
+                              context: context,
+                              backgroundColor: SketchColors.paper,
+                              showDragHandle: true,
+                              builder: (sheetContext) => SafeArea(
+                                child: ListView(
+                                  shrinkWrap: true,
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    4,
+                                    16,
+                                    20,
+                                  ),
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        4,
+                                        4,
+                                        4,
+                                        12,
+                                      ),
+                                      child: Text(
+                                        'Choose a category',
+                                        style: Theme.of(sheetContext)
+                                            .textTheme
+                                            .titleLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                    ),
+                                    for (final category in categories)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 8,
+                                        ),
+                                        child: SketchBox(
+                                          seed: category.id,
+                                          radius: 14,
+                                          fill:
+                                              category.id == _selectedCategoryId
+                                              ? SketchColors.paperFleck
+                                                    .withValues(alpha: 0.25)
+                                              : null,
+                                          padding: EdgeInsets.zero,
+                                          child: Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              onTap: () => Navigator.of(
+                                                sheetContext,
+                                              ).pop(category.id),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 14,
+                                                      vertical: 12,
+                                                    ),
+                                                child: Row(
+                                                  children: [
+                                                    CategoryIcon(
+                                                      category.name,
+                                                      iconKey: category.iconKey,
+                                                      size: 26,
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    Expanded(
+                                                      child: Text(
+                                                        category.name,
+                                                        style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    if (category.id ==
+                                                        _selectedCategoryId)
+                                                      Icon(
+                                                        Icons.check_circle,
+                                                        color: SketchColors.ink,
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                            if (pickedId != null) {
+                              setState(() => _selectedCategoryId = pickedId);
+                              field.didChange(pickedId);
+                            }
+                          },
+                          child: SketchBox(
+                            seed: 72,
+                            radius: 14,
+                            fill: null,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 13,
+                            ),
+                            child: Row(
                               children: [
-                                CategoryIcon(selected.name, size: 20),
-                                const SizedBox(width: 8),
-                                Text(selected.name),
+                                if (selected == null)
+                                  Icon(
+                                    Icons.category_outlined,
+                                    color: SketchColors.inkFaint,
+                                  )
+                                else
+                                  CategoryIcon(
+                                    selected.name,
+                                    iconKey: selected.iconKey,
+                                    size: 26,
+                                  ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Category',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: SketchColors.inkFaint,
+                                            ),
+                                      ),
+                                      Text(
+                                        selected?.name ?? 'Select a category',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.expand_more),
                               ],
                             ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
+                  ),
+                  TextFormField(
+                    controller: _titleController,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                      labelText: 'Title',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                    ),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _descriptionController,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                      labelText: 'Description (optional)',
+                      alignLabelWithHint: true,
+                      prefixIcon: Icon(Icons.notes_outlined),
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Title'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-              ),
-              maxLines: 3,
             ),
             const SizedBox(height: 20),
-            Text('Location', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            FormField<PlaceResult>(
-              validator: (_) =>
-                  _place == null ? 'Choose a location on the map' : null,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              builder: (field) => InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => _pickLocation(field),
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    labelText: 'Pick on map',
-                    errorText: field.errorText,
-                    prefixIcon: const Icon(Icons.place_outlined),
-                    suffixIcon: const Icon(Icons.map_outlined),
-                  ),
-                  child: _place == null
-                      ? const Text('Tap to choose a location', style: hintStyle)
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _place!.title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
+            _PostSectionHeading(
+              title: 'Location',
+              icon: const SketchIcon('pin', size: 24),
+            ),
+            const SizedBox(height: 10),
+            SketchBox(
+              seed: 73,
+              radius: 18,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: [
+                  FormField<PlaceResult>(
+                    validator: (_) =>
+                        _place == null ? 'Choose a location on the map' : null,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    builder: (field) => Column(
+                      children: [
+                        InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _pickLocation(field),
+                          child: SketchBox(
+                            seed: 74,
+                            radius: 14,
+                            fill: null,
+                            padding: const EdgeInsets.all(12),
+                            child: Row(
+                              children: [
+                                const SketchIcon('pin', size: 28),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Choose on map',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: SketchColors.inkFaint,
+                                            ),
+                                      ),
+                                      Text(
+                                        _place?.title ??
+                                            'Tap to choose a location',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      if (_place?.subtitle.isNotEmpty == true)
+                                        Text(
+                                          _place!.subtitle,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: SketchColors.inkFaint,
+                                              ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.map_outlined),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (field.errorText != null)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 4, left: 8),
+                              child: Text(
+                                field.errorText!,
+                                style: TextStyle(
+                                  color: SketchColors.danger,
+                                  fontSize: 12,
+                                ),
                               ),
                             ),
-                            if (_place!.subtitle.isNotEmpty)
-                              Text(
-                                _place!.subtitle,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                          ],
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            SketchBox(
+              radius: 12,
+              fill: null,
+              padding: const EdgeInsets.all(10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.lock_outline,
+                    size: 18,
+                    color: SketchColors.inkFaint,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Others only see an approximate area until they're accepted.",
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SketchColors.inkFaint,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            SketchBox(
+              seed: 75,
+              radius: 18,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _venueController,
+                    decoration: const InputDecoration(
+                      labelText: 'Venue name (optional)',
+                      prefixIcon: Icon(Icons.storefront_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _addressController,
+                    decoration: const InputDecoration(
+                      labelText: 'Address (optional)',
+                      prefixIcon: Icon(Icons.signpost_outlined),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            _PostSectionHeading(
+              title: 'Date & time',
+              icon: const SketchIcon('calendar', size: 24),
+            ),
+            const SizedBox(height: 10),
+            SketchBox(
+              seed: 76,
+              radius: 18,
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                children: [
+                  SketchButton(
+                    label: _startDateTime == null
+                        ? 'Set start time'
+                        : 'Starts ${_formatDateTime(_startDateTime!)}',
+                    icon: const Icon(Icons.play_arrow),
+                    onPressed: () => _pickDateTime(isStart: true),
+                    seed: 77,
+                  ),
+                  const SizedBox(height: 10),
+                  SketchButton(
+                    label: _endDateTime == null
+                        ? 'Set end time'
+                        : 'Ends ${_formatDateTime(_endDateTime!)}',
+                    icon: const Icon(Icons.flag_outlined),
+                    onPressed: () => _pickDateTime(isStart: false),
+                    seed: 78,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            _PostSectionHeading(
+              title: 'Group settings',
+              icon: const SketchIcon('people', size: 24),
+            ),
+            const SizedBox(height: 10),
+            SketchBox(
+              seed: 79,
+              radius: 18,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _spotsController,
+                          decoration: const InputDecoration(
+                            labelText: 'People needed',
+                            prefixIcon: Icon(Icons.people_outline),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (v) =>
+                              int.tryParse(v?.trim() ?? '') == null
+                              ? 'Invalid'
+                              : null,
                         ),
-                ),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.only(top: 4, left: 4),
-              child: Text(
-                "Others only see an approximate area until they're accepted.",
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _venueController,
-              decoration: const InputDecoration(
-                labelText: 'Venue name (optional)',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(
-                labelText: 'Address (optional)',
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text('Date & Time', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () => _pickDateTime(isStart: true),
-              child: Text(
-                _startDateTime == null
-                    ? 'Set start time'
-                    : _formatDateTime(_startDateTime!),
-              ),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () => _pickDateTime(isStart: false),
-              child: Text(
-                _endDateTime == null
-                    ? 'Set end time'
-                    : _formatDateTime(_endDateTime!),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _spotsController,
-                    decoration: const InputDecoration(
-                      labelText: 'People needed',
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (v) => int.tryParse(v?.trim() ?? '') == null
-                        ? 'Invalid'
-                        : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _teamSizeController,
+                          decoration: const InputDecoration(
+                            labelText: 'Team size (optional)',
+                            prefixIcon: Icon(Icons.groups_outlined),
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _teamSizeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Team size (optional)',
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: const SketchIcon('people', size: 26),
+                    title: const Text(
+                      'Enable shared costs',
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    keyboardType: TextInputType.number,
+                    subtitle: Text(
+                      'Let group members add and split expenses.',
+                      style: TextStyle(color: SketchColors.inkFaint),
+                    ),
+                    value: _costSharingEnabled,
+                    onChanged: (enabled) =>
+                        setState(() => _costSharingEnabled = enabled),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Enable shared costs'),
-              subtitle: const Text(
-                'Off by default. Enable this to let group members add and split expenses.',
+                ],
               ),
-              value: _costSharingEnabled,
-              onChanged: (enabled) =>
-                  setState(() => _costSharingEnabled = enabled),
             ),
             const SizedBox(height: 20),
-            DropdownButtonFormField<String>(
-              initialValue: _visibility,
-              decoration: const InputDecoration(labelText: 'Visibility'),
-              items: const [
-                DropdownMenuItem(value: 'public', child: Text('Public')),
-                DropdownMenuItem(
-                  value: 'nearby_only',
-                  child: Text('Nearby only'),
-                ),
-                DropdownMenuItem(
-                  value: 'invite_only',
-                  child: Text('Invite only'),
-                ),
-              ],
-              onChanged: (v) => setState(() => _visibility = v!),
+            _PostSectionHeading(
+              title: 'Visibility & verification',
+              icon: const SketchIcon('profile', size: 24),
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _minTier,
-              decoration: const InputDecoration(
-                labelText: 'Min. verification tier',
+            const SizedBox(height: 10),
+            SketchBox(
+              seed: 80,
+              radius: 18,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SketchChoiceSelector(
+                    title: 'Visibility',
+                    subtitle: 'Who can discover this activity?',
+                    icon: Icons.visibility_outlined,
+                    value: _visibility,
+                    onChanged: (value) =>
+                        setState(() => _visibility = value),
+                    options: const [
+                      (
+                        value: 'public',
+                        label: 'Public',
+                        description: 'Anyone can find and request to join.',
+                      ),
+                      (
+                        value: 'nearby_only',
+                        label: 'Nearby only',
+                        description: 'Shown to people in your nearby area.',
+                      ),
+                      (
+                        value: 'invite_only',
+                        label: 'Invite only',
+                        description: 'Only people you invite can join.',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  _SketchChoiceSelector(
+                    title: 'Minimum verification',
+                    subtitle: 'Who is eligible to request to join?',
+                    icon: Icons.verified_user_outlined,
+                    value: _minTier,
+                    onChanged: (value) => setState(() => _minTier = value),
+                    options: const [
+                      (
+                        value: 'basic',
+                        label: 'Basic',
+                        description: 'Basic account verification.',
+                      ),
+                      (
+                        value: 'social_verified',
+                        label: 'Social verified',
+                        description: 'Requires a verified social profile.',
+                      ),
+                      (
+                        value: 'fully_verified',
+                        label: 'Fully verified',
+                        description: 'Requires full account verification.',
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              items: const [
-                DropdownMenuItem(value: 'basic', child: Text('Basic')),
-                DropdownMenuItem(
-                  value: 'social_verified',
-                  child: Text('Social Verified'),
-                ),
-                DropdownMenuItem(
-                  value: 'fully_verified',
-                  child: Text('Fully Verified'),
-                ),
-              ],
-              onChanged: (v) => setState(() => _minTier = v!),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
+            SketchButton(
+              label: 'Publish activity',
+              icon: const Icon(Icons.publish),
+              filled: true,
+              isLoading: _isSubmitting,
               onPressed: _isSubmitting ? null : _submit,
-              child: _isSubmitting
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Publish'),
+              seed: 81,
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PostSectionHeading extends StatelessWidget {
+  final String title;
+  final Widget icon;
+
+  const _PostSectionHeading({required this.title, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        icon,
+        const SizedBox(width: 9),
+        Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
+}
+
+class _SketchChoiceSelector extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final String value;
+  final ValueChanged<String> onChanged;
+  final List<({String value, String label, String description})> options;
+
+  const _SketchChoiceSelector({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.value,
+    required this.onChanged,
+    required this.options,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: SketchColors.ink),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: SketchColors.ink,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SketchColors.inkFaint,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        for (var index = 0; index < options.length; index++) ...[
+          if (index > 0) const SizedBox(height: 8),
+          Builder(
+            builder: (context) {
+              final option = options[index];
+              final selected = option.value == value;
+              return SketchBox(
+                seed: 82 + index,
+                radius: 13,
+                fill: selected
+                    ? SketchColors.paperFleck.withValues(alpha: 0.42)
+                    : null,
+                padding: EdgeInsets.zero,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => onChanged(option.value),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            selected
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            color: SketchColors.ink,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  option.label,
+                                  style: TextStyle(
+                                    color: SketchColors.ink,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  option.description,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: SketchColors.inkFaint),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ],
     );
   }
 }

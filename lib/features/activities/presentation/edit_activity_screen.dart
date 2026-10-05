@@ -148,9 +148,15 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
   Widget build(BuildContext context) {
     final expensesAsync = widget.groupId == null
         ? null
-        : ref.watch(groupExpensesProvider(widget.groupId!));
+        : ref.watch(
+            groupExpensesProvider((
+              groupId: widget.groupId!,
+              page: 1,
+              pageSize: 1,
+            )),
+          );
     final hasExpenses = expensesAsync?.maybeWhen(
-      data: (expenses) => expenses.isNotEmpty,
+      data: (expenses) => expenses.count > 0,
       orElse: () => false,
     );
     final canDisableCostSharing =
@@ -195,9 +201,7 @@ class _EditActivityScreenState extends ConsumerState<EditActivityScreen> {
             secondary: expensesAsync?.hasError == true
                 ? IconButton(
                     tooltip: 'Retry loading expenses',
-                    onPressed: () => ref.invalidate(
-                      groupExpensesProvider(widget.groupId!),
-                    ),
+                    onPressed: () => ref.invalidate(groupExpensesProvider),
                     icon: const Icon(Icons.refresh),
                   )
                 : null,

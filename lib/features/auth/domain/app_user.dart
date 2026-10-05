@@ -1,3 +1,5 @@
+import 'social_profile.dart';
+
 class AppUser {
   final String id;
   final String phoneNumber;
@@ -9,6 +11,7 @@ class AppUser {
   final String trustTier;
   final bool isPhoneVerified;
   final DateTime dateJoined;
+  final List<SocialProfile> socialProfiles;
 
   const AppUser({
     required this.id,
@@ -21,6 +24,7 @@ class AppUser {
     required this.trustTier,
     required this.isPhoneVerified,
     required this.dateJoined,
+    this.socialProfiles = const [],
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) => AppUser(
@@ -36,5 +40,12 @@ class AppUser {
     trustTier: json['trust_tier'] as String,
     isPhoneVerified: json['is_phone_verified'] as bool,
     dateJoined: DateTime.parse(json['date_joined'] as String),
+    socialProfiles: (json['social_profiles'] as List? ?? const [])
+        .map(
+          (profile) => SocialProfile.fromJson(
+            Map<String, dynamic>.from(profile as Map),
+          ),
+        )
+        .toList(growable: false),
   );
 }

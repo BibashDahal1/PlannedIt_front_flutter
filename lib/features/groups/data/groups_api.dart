@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
+import '../../../core/network/api_response.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../domain/group_summary.dart';
 import '../domain/group_roster.dart';
 import '../domain/group_team.dart';
 import '../domain/group_expense.dart';
+import '../domain/group_expense_page.dart';
 
 class GroupsApi {
   GroupsApi(this._dio);
@@ -11,9 +13,11 @@ class GroupsApi {
 
   Future<List<GroupSummary>> fetchMyGroups() async {
     final response = await _dio.get(ApiEndpoints.myGroups);
-    return (response.data as List)
-        .map((item) => GroupSummary.fromJson(item as Map<String, dynamic>))
-        .toList();
+    return parseListResponse(
+      response.data,
+      GroupSummary.fromJson,
+      resourceName: 'groups',
+    );
   }
 
   Future<GroupRoster> fetchGroup(String id) async {
@@ -32,19 +36,37 @@ class GroupsApi {
     return GroupRoster.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<List<GroupExpense>> fetchExpenses(String groupId) async {
-    final response = await _dio.get(ApiEndpoints.groupExpenses(groupId));
+  Future<GroupExpensePage> fetchExpenses(
+    String groupId, {
+    required int page,
+    required int pageSize,
+  }) async {
+    final response = await _dio.get(
+      ApiEndpoints.groupExpenses(groupId),
+      queryParameters: {'page': page, 'page_size': pageSize},
+    );
     final data = response.data;
-    final expenses = data is List
-        ? data
-        : data is Map<String, dynamic> && data['expenses'] is List
-        ? data['expenses'] as List
-        : throw FormatException('Unexpected expenses response');
-    return expenses
-        .map(
-          (expense) => GroupExpense.fromJson(expense as Map<String, dynamic>),
-        )
-        .toList(growable: false);
+    if (data is List) {
+      return GroupExpensePage.fromLegacyResults(
+        data,
+        page: page,
+        pageSize: pageSize,
+      );
+    }
+    if (data is Map) {
+      final json = Map<String, dynamic>.from(data);
+      if (json['results'] is List) {
+        return GroupExpensePage.fromJson(json);
+      }
+      if (json['expenses'] is List) {
+        return GroupExpensePage.fromLegacyResults(
+          json['expenses'] as List<dynamic>,
+          page: page,
+          pageSize: pageSize,
+        );
+      }
+    }
+    throw const FormatException('Unexpected expenses response');
   }
 
   Future<GroupExpense> createExpense({

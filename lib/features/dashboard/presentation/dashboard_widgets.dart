@@ -24,7 +24,11 @@ class GroupActivityIcon extends ConsumerWidget {
           activityDetailProvider(roster.activityId),
         );
         return activityAsync.when(
-          data: (activity) => CategoryIcon(activity.category.name, size: size),
+          data: (activity) => CategoryIcon(
+            activity.category.name,
+            iconKey: activity.category.iconKey,
+            size: size,
+          ),
           loading: () => SketchIcon('calendar', size: size),
           error: (_, _) => SketchIcon('calendar', size: size),
         );

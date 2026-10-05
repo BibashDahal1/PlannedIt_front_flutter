@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_error.dart';
+import '../domain/age_eligibility.dart';
 import '../domain/auth_flow_mode.dart';
 import 'auth_controller.dart';
 
@@ -30,9 +31,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   bool _isAtLeast18(DateTime dob) {
-    final now = DateTime.now();
-    final eighteenth = DateTime(dob.year + 18, dob.month, dob.day);
-    return !eighteenth.isAfter(now) == false ? false : !eighteenth.isAfter(now);
+    return isAtLeast18(dob);
   }
 
   Future<void> _pickDateOfBirth() async {
@@ -167,8 +166,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               validator: (value) {
                 final v = value?.trim() ?? '';
                 final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                if (!emailPattern.hasMatch(v))
+                if (!emailPattern.hasMatch(v)) {
                   return 'Enter a valid email address';
+                }
                 return null;
               },
             ),

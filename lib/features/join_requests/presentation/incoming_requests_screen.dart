@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/realtime/notification_event.dart';
 import '../../../core/realtime/notification_providers.dart';
 import '../../../core/network/api_error.dart';
+import '../../../core/theme/sketch_colors.dart';
+import '../../../core/widgets/sketch_box.dart';
+import '../../../core/widgets/sketch_button.dart';
+import '../../../core/widgets/sketch_icon.dart';
 import '../../groups/data/groups_providers.dart';
 import '../data/join_requests_providers.dart';
 import '../domain/join_request.dart';
@@ -17,15 +21,94 @@ class IncomingRequestsScreen extends ConsumerWidget {
     final requestsAsync = ref.watch(incomingRequestsProvider(activityId));
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('Incoming Requests')),
       body: requestsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Could not load: $e')),
+        loading: () => Center(
+          child: SketchBox(
+            radius: 18,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 26,
+                  height: 26,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: SketchColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('Loading incoming requests...'),
+              ],
+            ),
+          ),
+        ),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: SketchBox(
+              radius: 18,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SketchIcon('more_dots', size: 42),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Could not load incoming requests.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    extractApiErrorMessage(e),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: SketchColors.inkFaint),
+                  ),
+                  const SizedBox(height: 14),
+                  SketchButton(
+                    label: 'Try again',
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () =>
+                        ref.invalidate(incomingRequestsProvider(activityId)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
         data: (requests) {
-          if (requests.isEmpty)
-            return const Center(child: Text('No requests yet.'));
+          if (requests.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: SketchBox(
+                  radius: 18,
+                  padding: const EdgeInsets.all(24),
+                  child: const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SketchIcon('people', size: 48),
+                      SizedBox(height: 12),
+                      Text(
+                        'No requests yet.',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'New requests to join this activity will appear here.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
             itemCount: requests.length,
             itemBuilder: (context, i) => _IncomingRequestCard(
               request: requests[i],
@@ -73,7 +156,7 @@ class _IncomingRequestCardState extends ConsumerState<_IncomingRequestCard> {
       final acceptedRequest = await ref
           .read(joinRequestsRepositoryProvider)
           .acceptJoinRequest(widget.request.id);
-        ref.invalidate(myGroupsProvider);
+      ref.invalidate(myGroupsProvider);
       widget.onHandled();
 
       final groupId =
@@ -123,61 +206,138 @@ class _IncomingRequestCardState extends ConsumerState<_IncomingRequestCard> {
     final r = widget.request;
     final isPending = r.status == 'pending';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: SketchBox(
+        seed: r.id.hashCode,
+        radius: 18,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              r.requester?.fullName.isNotEmpty == true
-                  ? r.requester!.fullName
-                  : 'Requester',
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SketchBox(
+                  seed: r.requester?.id.hashCode ?? r.id.hashCode + 1,
+                  radius: 13,
+                  width: 46,
+                  height: 46,
+                  child: const Center(child: SketchIcon('profile', size: 28)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        r.requester?.fullName.isNotEmpty == true
+                            ? r.requester!.fullName
+                            : 'Requester',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      if (r.activityTitle?.isNotEmpty == true)
+                        Text(
+                          'For ${r.activityTitle}',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: SketchColors.inkFaint),
+                        ),
+                    ],
+                  ),
+                ),
+                SketchBox(
+                  seed: r.status.hashCode,
+                  radius: 12,
+                  fill: null,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  child: Text(
+                    _statusLabel(r.status),
+                    style: TextStyle(
+                      color: isPending
+                          ? SketchColors.ink
+                          : SketchColors.inkFaint,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            if (r.requester != null)
-              Text(
-                'Trust: ${r.requester!.trustTier} · ${r.requester!.verificationStatus}',
-                style: Theme.of(context).textTheme.bodyMedium,
+            if (r.requester != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const SketchIcon('social_table', size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Trust: ${r.requester!.trustTier} · ${r.requester!.verificationStatus}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SketchColors.inkFaint,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            if (r.message != null && r.message!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(r.message!),
             ],
-            const SizedBox(height: 12),
-            if (isPending)
+            if (r.message?.isNotEmpty == true) ...[
+              const SizedBox(height: 12),
+              SketchBox(
+                seed: r.id.hashCode + 2,
+                radius: 12,
+                fill: null,
+                padding: const EdgeInsets.all(10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SketchIcon('chat', size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(r.message!)),
+                  ],
+                ),
+              ),
+            ],
+            if (isPending) ...[
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
+                    child: SketchButton(
+                      label: 'Decline',
                       onPressed: _isProcessing ? null : _decline,
-                      child: const Text('Decline'),
+                      danger: true,
+                      seed: r.id.hashCode + 3,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
+                    child: SketchButton(
+                      label: 'Accept',
                       onPressed: _isProcessing ? null : _accept,
-                      child: _isProcessing
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Accept'),
+                      isLoading: _isProcessing,
+                      filled: true,
+                      seed: r.id.hashCode + 4,
                     ),
                   ),
                 ],
-              )
-            else
-              Chip(label: Text(r.status)),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+
+  String _statusLabel(String status) => switch (status) {
+    'pending' => 'Pending',
+    'accepted' => 'Accepted',
+    'declined' => 'Declined',
+    'rejected' => 'Rejected',
+    'withdrawn' => 'Withdrawn',
+    _ => status,
+  };
 }

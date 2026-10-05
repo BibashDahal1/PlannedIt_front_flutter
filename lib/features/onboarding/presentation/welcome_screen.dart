@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/sketch_colors.dart';
 import '../../../core/widgets/fade_slide_in.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -9,7 +9,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
@@ -31,23 +31,24 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              const Align(
+              Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Find people. Fill your team. Play now.',
-                  style: TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: SketchColors.inkFaint),
                 ),
               ),
               const Spacer(),
               FadeSlideIn(
                 delay: const Duration(milliseconds: 150),
                 child: Image.asset(
-                  'assets/images/onboarding/splash_illustration.png',
+                  'assets/images/sketch/onb2_people.png',
                   height: 220,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => Icon(
                     Icons.sports_soccer,
                     size: 120,
-                    color: AppColors.primary,
+                    color: SketchColors.inkFaint,
                   ),
                 ),
               ),

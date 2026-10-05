@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/network/api_response.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../domain/chat_message.dart';
 
@@ -27,8 +28,10 @@ class ChatApi {
           ? {'before': before.toUtc().toIso8601String()}
           : null,
     );
-    return (response.data as List)
-        .map((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return parseListResponse(
+      response.data,
+      ChatMessage.fromJson,
+      resourceName: 'chat messages',
+    );
   }
 }

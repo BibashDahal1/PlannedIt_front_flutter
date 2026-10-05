@@ -205,7 +205,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 children: group
                     .map(
                       (a) => ListTile(
-                        leading: CategoryIcon(a.category.name, size: 24),
+                        leading: CategoryIcon(
+                          a.category.name,
+                          iconKey: a.category.iconKey,
+                          size: 24,
+                        ),
                         title: Text(
                           a.title,
                           maxLines: 1,
@@ -530,7 +534,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               c.name,
               _categoryId == c.id,
               () => setState(() => _categoryId = c.id),
-              icon: sketchAssetForCategory(c.name),
+              icon: sketchAssetForCategory(c.name, iconKey: c.iconKey),
             ),
         ],
       ),
@@ -641,7 +645,11 @@ class _ActivityMarker extends StatelessWidget {
             ),
             child: Center(
               child: group.length == 1
-                  ? CategoryIcon(group.first.category.name, size: 22)
+                  ? CategoryIcon(
+                      group.first.category.name,
+                      iconKey: group.first.category.iconKey,
+                      size: 22,
+                    )
                   : const SketchAllGlyph(size: 20),
             ),
           ),
@@ -703,7 +711,11 @@ class _MiniActivityCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
-                    child: CategoryIcon(activity.category.name, size: 26),
+                    child: CategoryIcon(
+                      activity.category.name,
+                      iconKey: activity.category.iconKey,
+                      size: 26,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),

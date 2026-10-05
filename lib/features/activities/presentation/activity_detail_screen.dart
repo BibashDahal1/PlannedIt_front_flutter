@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/sketch_colors.dart';
+import '../../../core/widgets/sketch_box.dart';
+import '../../../core/widgets/sketch_button.dart';
 import '../../../core/widgets/sketch_icon.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../join_requests/data/join_requests_providers.dart';
@@ -198,120 +201,156 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppColors.primarySoft,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: CategoryIcon(activity.category.name, size: 26),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                SketchBox(
+                  seed: activity.id.hashCode,
+                  radius: 20,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Text(
-                            activity.title,
-                            style: Theme.of(context).textTheme.headlineMedium,
+                          SketchBox(
+                            seed: activity.category.name.hashCode,
+                            radius: 14,
+                            width: 54,
+                            height: 54,
+                            child: Center(
+                              child: CategoryIcon(
+                                activity.category.name,
+                                iconKey: activity.category.iconKey,
+                                size: 30,
+                              ),
+                            ),
                           ),
-                          Text(
-                            activity.category.name,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  activity.title,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.headlineMedium,
+                                ),
+                                Text(
+                                  activity.category.name,
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(color: SketchColors.inkFaint),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                if (activity.description != null) ...[
-                  Text(
-                    activity.description!,
-                    style: Theme.of(context).textTheme.bodyLarge,
+                      if (activity.description != null &&
+                          activity.description!.isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        const SketchUnderline(width: 72),
+                        const SizedBox(height: 8),
+                        Text(
+                          activity.description!,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                ],
-                _DetailRow(
-                  icon: const SketchIcon('pin', size: 18),
-                  label:
-                      displayLocation.venueName ??
-                      displayLocation.addressText ??
-                      'Nearby',
                 ),
-                _DetailRow(
-                  icon: const SketchIcon('calendar', size: 18),
-                  label:
-                      '${_formatDateTime(activity.scheduledStart)} – ${_formatTime(activity.scheduledEnd)}',
+                const SizedBox(height: 16),
+                SketchBox(
+                  seed: activity.id.hashCode + 1,
+                  radius: 18,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  child: Column(
+                    children: [
+                      _DetailRow(
+                        icon: const SketchIcon('pin', size: 22),
+                        label:
+                            displayLocation.venueName ??
+                            displayLocation.addressText ??
+                            'Nearby',
+                      ),
+                      _DetailRow(
+                        icon: const SketchIcon('calendar', size: 22),
+                        label:
+                            '${_formatDateTime(activity.scheduledStart)} – ${_formatTime(activity.scheduledEnd)}',
+                      ),
+                      _DetailRow(
+                        icon: const SketchIcon('people', size: 22),
+                        label:
+                            '${activity.totalSpotsNeeded} spots needed'
+                            '${activity.teamSize != null ? ' · team size ${activity.teamSize}' : ''}',
+                      ),
+                      _DetailRow(
+                        icon: const Icon(Icons.receipt_long_outlined, size: 22),
+                        label: activity.costSharingEnabled
+                            ? 'Shared costs enabled'
+                            : 'Shared costs disabled',
+                      ),
+                      if (activity.minVerificationTier != null)
+                        _DetailRow(
+                          icon: const Icon(Icons.verified_user_outlined),
+                          label:
+                              'Min. verification: ${activity.minVerificationTier}',
+                        ),
+                    ],
+                  ),
                 ),
-                _DetailRow(
-                  icon: const SketchIcon('people', size: 18),
-                  label:
-                      '${activity.totalSpotsNeeded} spots needed'
-                      '${activity.teamSize != null ? ' · team size ${activity.teamSize}' : ''}',
-                ),
-                _DetailRow(
-                  icon: const Icon(Icons.receipt_long_outlined, size: 18),
-                  label: activity.costSharingEnabled
-                      ? 'Shared costs enabled'
-                      : 'Shared costs disabled',
-                ),
-                if (isHost && !activity.costSharingEnabled)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      label: const Text('Enable shared costs'),
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => EditActivityScreen(
-                            activity: activity,
-                            location: displayLocation,
-                            groupId: groupLink?.groupId,
-                          ),
+                if (isHost && !activity.costSharingEnabled) ...[
+                  const SizedBox(height: 10),
+                  SketchButton(
+                    label: 'Enable shared costs',
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => EditActivityScreen(
+                          activity: activity,
+                          location: displayLocation,
+                          groupId: groupLink?.groupId,
                         ),
                       ),
                     ),
+                    seed: activity.id.hashCode + 2,
                   ),
-                if (activity.minVerificationTier != null)
-                  _DetailRow(
-                    icon: const Icon(
-                      Icons.verified_user_outlined,
-                      size: 18,
-                      color: AppColors.textSecondary,
-                    ),
-                    label: 'Min. verification: ${activity.minVerificationTier}',
-                  ),
-                const SizedBox(height: 12),
-                ActivityLocationMap(location: displayLocation),
+                ],
+                const SizedBox(height: 16),
+                SketchBox(
+                  seed: activity.id.hashCode + 3,
+                  radius: 18,
+                  padding: const EdgeInsets.all(4),
+                  child: ActivityLocationMap(location: displayLocation),
+                ),
                 const SizedBox(height: 12),
                 if (groupLink != null) ...[
-                  OutlinedButton.icon(
+                  SketchButton(
+                    label: 'Open Group Chat',
                     icon: const Icon(Icons.chat_bubble_outline),
-                    label: const Text('Open Group Chat'),
                     onPressed: () =>
                         context.push('/group/${groupLink.groupId}/chat'),
+                    seed: activity.id.hashCode + 4,
                   ),
                   const SizedBox(height: 12),
                 ],
-                Card(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => context.push(
-                      '/profile/${activity.host.id}/public?activityId=${activity.id}',
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
+                SketchBox(
+                  seed: activity.host.id.hashCode,
+                  radius: 16,
+                  padding: const EdgeInsets.all(14),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => context.push(
+                        '/profile/${activity.host.id}/public?activityId=${activity.id}',
+                      ),
                       child: Row(
                         children: [
                           UserAvatar(
                             avatarUrl: activity.host.avatar,
-                            radius: 20,
+                            radius: 22,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -328,15 +367,13 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                                 ),
                                 Text(
                                   'Trust tier: ${activity.host.trustTier} · ${activity.host.verificationStatus}',
-                                  style: Theme.of(context).textTheme.bodyMedium,
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(color: SketchColors.inkFaint),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(
-                            Icons.chevron_right,
-                            color: AppColors.textSecondary,
-                          ),
+                          const Icon(Icons.chevron_right),
                         ],
                       ),
                     ),
@@ -344,16 +381,19 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                 ),
                 const SizedBox(height: 24),
                 if (isHost) ...[
-                  ElevatedButton(
+                  SketchButton(
+                    label: 'View incoming requests',
+                    icon: const Icon(Icons.inbox_outlined),
                     onPressed: () =>
                         context.push('/activity/${activity.id}/requests'),
-                    child: const Text('View incoming requests'),
+                    filled: true,
+                    seed: activity.id.hashCode + 5,
                   ),
                   if (isOpenForActions) ...[
                     const SizedBox(height: 12),
-                    OutlinedButton.icon(
+                    SketchButton(
+                      label: 'Edit Activity',
                       icon: const Icon(Icons.edit_outlined, size: 18),
-                      label: const Text('Edit Activity'),
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => EditActivityScreen(
@@ -363,71 +403,47 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                           ),
                         ),
                       ),
+                      seed: activity.id.hashCode + 6,
                     ),
                     const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      icon: const Icon(
-                        Icons.cancel_outlined,
-                        size: 18,
-                        color: AppColors.danger,
-                      ),
-                      label: const Text(
-                        'Cancel Activity',
-                        style: TextStyle(color: AppColors.danger),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.danger),
-                      ),
+                    SketchButton(
+                      label: 'Cancel Activity',
+                      icon: const Icon(Icons.cancel_outlined, size: 18),
                       onPressed: _cancelActivity,
+                      danger: true,
+                      seed: activity.id.hashCode + 7,
                     ),
                   ],
                   const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      size: 18,
-                      color: AppColors.danger,
-                    ),
-                    label: const Text(
-                      'Delete Activity',
-                      style: TextStyle(color: AppColors.danger),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.danger),
-                    ),
+                  SketchButton(
+                    label: 'Delete Activity',
+                    icon: const Icon(Icons.delete_outline, size: 18),
                     onPressed: _deleteActivity,
+                    danger: true,
+                    seed: activity.id.hashCode + 8,
                   ),
                   if (canMarkComplete) ...[
                     const SizedBox(height: 12),
-                    OutlinedButton(
+                    SketchButton(
+                      label: 'Mark as Complete',
                       onPressed: _isCompleting ? null : _markComplete,
-                      child: _isCompleting
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Mark as Complete'),
+                      isLoading: _isCompleting,
+                      seed: activity.id.hashCode + 9,
                     ),
                   ],
                 ] else if (activity.status == 'open')
-                  ElevatedButton(
+                  SketchButton(
+                    label: 'Request to Join',
                     onPressed: _isRequesting ? null : _requestToJoin,
-                    child: _isRequesting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Request to Join'),
+                    filled: true,
+                    isLoading: _isRequesting,
+                    seed: activity.id.hashCode + 10,
                   )
                 else
-                  OutlinedButton(
+                  SketchButton(
+                    label: 'This activity is ${activity.status}',
                     onPressed: null,
-                    child: Text('This activity is ${activity.status}'),
+                    seed: activity.id.hashCode + 11,
                   ),
               ],
             ),

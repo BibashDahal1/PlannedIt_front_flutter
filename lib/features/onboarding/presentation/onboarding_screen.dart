@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/sketch_colors.dart';
 import '../data/onboarding_pages_data.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -36,7 +37,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           children: [
@@ -54,24 +55,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       children: [
                         Image.asset(
                           page.imagePath,
+                          width: double.infinity,
                           height: 240,
+                          fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
+                              Icon(
                                 Icons.image_outlined,
                                 size: 100,
-                                color: AppColors.primary,
+                                color: SketchColors.inkFaint,
                               ),
                         ),
                         const SizedBox(height: 32),
                         Text(
                           page.title,
-                          style: Theme.of(context).textTheme.headlineMedium,
+                          style: AppTheme.heading(size: 36),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 12),
                         Text(
                           page.description,
-                          style: Theme.of(context).textTheme.bodyLarge,
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: SketchColors.inkFaint,
+                                height: 1.4,
+                              ),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -90,7 +97,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   height: 8,
                   width: i == _index ? 22 : 8,
                   decoration: BoxDecoration(
-                    color: i == _index ? AppColors.primary : AppColors.border,
+                    color: i == _index
+                        ? SketchColors.ink
+                        : SketchColors.paperFleck,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

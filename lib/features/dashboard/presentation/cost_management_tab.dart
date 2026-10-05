@@ -9,11 +9,13 @@ import '../../activities/data/activities_providers.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../groups/data/groups_providers.dart';
 import '../../groups/domain/group_expense.dart';
+import '../../groups/domain/group_expense_page.dart';
 import '../../groups/domain/group_member.dart';
+import '../../groups/domain/group_roster.dart';
 import 'dashboard_widgets.dart';
 import 'expense_dialog.dart';
 
-class CostManagementTab extends ConsumerWidget {
+class CostManagementTab extends ConsumerStatefulWidget {
   final String groupId;
   final bool isActive;
 
@@ -24,18 +26,284 @@ class CostManagementTab extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!isActive) return const SizedBox.shrink();
+  ConsumerState<CostManagementTab> createState() => _CostManagementTabState();
+}
+
+class _CostManagementTabState extends ConsumerState<CostManagementTab> {
+  static const _pageSize = 20;
+
+  int _page = 1;
+  bool _hasNextPage = true;
+  bool _isLoadingPage = true;
+  int? _totalCount;
+  String? _pageError;
+  final _expenseScrollController = ScrollController();
+  final List<GroupExpense> _expenses = [];
+  final Set<String> _expenseIds = {};
+
+  GroupExpensesRequest get _expensesRequest =>
+      (groupId: widget.groupId, page: _page, pageSize: _pageSize);
+
+  @override
+  void initState() {
+    super.initState();
+    _expenseScrollController.addListener(_maybeLoadNextPage);
+  }
+
+  @override
+  void didUpdateWidget(covariant CostManagementTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.groupId != widget.groupId) {
+      _page = 1;
+      _resetLoadedExpenses();
+    }
+  }
+
+  @override
+  void dispose() {
+    _expenseScrollController
+      ..removeListener(_maybeLoadNextPage)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _resetLoadedExpenses() {
+    _expenses.clear();
+    _expenseIds.clear();
+    _hasNextPage = true;
+    _isLoadingPage = true;
+    _totalCount = null;
+    _pageError = null;
+  }
+
+  void _refreshExpenses() {
+    setState(() {
+      _page = 1;
+      _resetLoadedExpenses();
+    });
+    ref.invalidate(groupExpensesProvider);
+  }
+
+  void _maybeLoadNextPage() {
+    if (!_expenseScrollController.hasClients ||
+        _expenseScrollController.position.extentAfter > 200 ||
+        !_hasNextPage ||
+        _isLoadingPage ||
+        _pageError != null) {
+      return;
+    }
+    setState(() {
+      _page++;
+      _isLoadingPage = true;
+    });
+  }
+
+  void _receivePage(GroupExpensePage page) {
+    if (!mounted || page.page != _page) return;
+    setState(() {
+      for (final expense in page.results) {
+        if (_expenseIds.add(expense.id)) _expenses.add(expense);
+      }
+      _hasNextPage = page.hasNext;
+      _totalCount = page.count;
+      _isLoadingPage = false;
+      _pageError = null;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _maybeLoadNextPage();
+    });
+  }
+
+  void _receivePageError(int page, Object error) {
+    if (page != _page) return;
+    if (!mounted) return;
+    setState(() {
+      _isLoadingPage = false;
+      _pageError = extractApiErrorMessage(error);
+    });
+  }
+
+  void _retryPage() {
+    setState(() {
+      _isLoadingPage = true;
+      _pageError = null;
+    });
+    ref.invalidate(groupExpensesProvider(_expensesRequest));
+  }
+
+  Widget _buildExpenseList(
+    GroupRoster roster,
+    String? currentUserId,
+    bool isHost,
+  ) {
+    final hasExpenses = _expenses.isNotEmpty;
+    final hasFooter = _isLoadingPage || _pageError != null;
+    return Column(
+      children: [
+        if (hasExpenses) ...[
+          _ExpenseSummary(
+            expenses: _expenses,
+            members: roster.members,
+            currentUserId: currentUserId,
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              _totalCount == null
+                  ? '${_expenses.length} expenses loaded'
+                  : '${_expenses.length} of $_totalCount expenses loaded',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async => _refreshExpenses(),
+            child: !hasExpenses
+                ? ListView(
+                    controller: _expenseScrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      if (_isLoadingPage)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 48),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (_pageError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 48),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Text('Could not load expenses: $_pageError'),
+                                TextButton(
+                                  onPressed: _retryPage,
+                                  child: const Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 48),
+                            child: SketchBox(
+                              seed: widget.groupId.hashCode,
+                              radius: 16,
+                              padding: const EdgeInsets.all(20),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SketchIcon('people', size: 28),
+                                  SizedBox(width: 10),
+                                  Text('No shared expenses yet.'),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  )
+                : ListView.separated(
+                    controller: _expenseScrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: _expenses.length + (hasFooter ? 1 : 0),
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      if (index == _expenses.length) {
+                        if (_pageError != null) {
+                          return Center(
+                            child: TextButton.icon(
+                              onPressed: _retryPage,
+                              icon: const Icon(Icons.refresh),
+                              label: Text(
+                                'Could not load more: $_pageError · Retry',
+                              ),
+                            ),
+                          );
+                        }
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+
+                      final expense = _expenses[index];
+                      final canEdit =
+                          expense.paidById == currentUserId || isHost;
+                      return _ExpenseCard(
+                        expense: expense,
+                        canEdit: canEdit,
+                        onEdit: () async {
+                          await showExpenseDialog(
+                            context: context,
+                            ref: ref,
+                            roster: roster,
+                            expense: expense,
+                          );
+                          if (mounted) _refreshExpenses();
+                        },
+                        onDelete: () => _deleteExpense(
+                          context: context,
+                          ref: ref,
+                          groupId: roster.id,
+                          expense: expense,
+                          onDeleted: _refreshExpenses,
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isActive) return const SizedBox.shrink();
 
     // Start the expense request immediately when the user opens this tab;
     // it does not depend on a separate activity-detail request.
-    final expensesAsync = ref.watch(groupExpensesProvider(groupId));
-    final rosterAsync = ref.watch(groupRosterProvider(groupId));
+    final requestedPage = _page;
+    ref.listen(groupExpensesProvider(_expensesRequest), (previous, next) {
+      next.when(
+        data: (page) {
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _receivePage(page),
+          );
+        },
+        error: (error, _) {
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _receivePageError(requestedPage, error),
+          );
+        },
+        loading: () {},
+      );
+    });
+    final expensesAsync = ref.watch(groupExpensesProvider(_expensesRequest));
+    if (_isLoadingPage && !expensesAsync.isLoading) {
+      final cachedPage = expensesAsync.value;
+      if (cachedPage != null) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _receivePage(cachedPage),
+        );
+      } else if (expensesAsync.hasError) {
+        final error = expensesAsync.error!;
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _receivePageError(requestedPage, error),
+        );
+      }
+    }
+    final rosterAsync = ref.watch(groupRosterProvider(widget.groupId));
     return rosterAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => DashboardError(
         message: 'Could not load group: ${extractApiErrorMessage(error)}',
-        onRetry: () => ref.invalidate(groupRosterProvider(groupId)),
+        onRetry: () => ref.invalidate(groupRosterProvider(widget.groupId)),
       ),
       data: (roster) {
         final activityAsync = ref.watch(
@@ -66,11 +334,14 @@ class CostManagementTab extends ConsumerWidget {
                   ),
                   FilledButton.icon(
                     onPressed: costSharingEnabled
-                        ? () => showExpenseDialog(
-                            context: context,
-                            ref: ref,
-                            roster: roster,
-                          )
+                        ? () async {
+                            await showExpenseDialog(
+                              context: context,
+                              ref: ref,
+                              roster: roster,
+                            );
+                            if (mounted) _refreshExpenses();
+                          }
                         : null,
                     icon: const SketchIcon('plus', size: 22),
                     label: const Text('Add expense'),
@@ -140,86 +411,17 @@ class CostManagementTab extends ConsumerWidget {
               const SizedBox(height: 12),
               Expanded(
                 child: expensesAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => DashboardError(
-                    message:
-                        'Could not load expenses: ${extractApiErrorMessage(error)}',
-                    onRetry: () =>
-                        ref.invalidate(groupExpensesProvider(groupId)),
-                  ),
-                  data: (expenses) => expenses.isEmpty
-                      ? RefreshIndicator(
-                          onRefresh: () async =>
-                              ref.invalidate(groupExpensesProvider(groupId)),
-                          child: ListView(
-                            padding: const EdgeInsets.only(top: 48),
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            children: [
-                              Center(
-                                child: SketchBox(
-                                  seed: groupId.hashCode,
-                                  radius: 16,
-                                  padding: const EdgeInsets.all(20),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      SketchIcon('people', size: 28),
-                                      SizedBox(width: 10),
-                                      Text('No shared expenses yet.'),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                  loading: () => _expenses.isEmpty
+                      ? const Center(child: CircularProgressIndicator())
+                      : _buildExpenseList(roster, currentUserId, isHost),
+                  error: (error, _) => _expenses.isEmpty
+                      ? DashboardError(
+                          message:
+                              'Could not load expenses: ${extractApiErrorMessage(error)}',
+                          onRetry: _retryPage,
                         )
-                      : Column(
-                          children: [
-                            _ExpenseSummary(
-                              expenses: expenses,
-                              members: roster.members,
-                              currentUserId: currentUserId,
-                            ),
-                            const SizedBox(height: 10),
-                            Expanded(
-                              child: RefreshIndicator(
-                                onRefresh: () async => ref.invalidate(
-                                  groupExpensesProvider(groupId),
-                                ),
-                                child: ListView.separated(
-                                  physics:
-                                      const AlwaysScrollableScrollPhysics(),
-                                  itemCount: expenses.length,
-                                  separatorBuilder: (_, _) =>
-                                      const SizedBox(height: 8),
-                                  itemBuilder: (context, index) {
-                                    final expense = expenses[index];
-                                    final canEdit =
-                                        expense.paidById == currentUserId ||
-                                        isHost;
-                                    return _ExpenseCard(
-                                      expense: expense,
-                                      canEdit: canEdit,
-                                      onEdit: () => showExpenseDialog(
-                                        context: context,
-                                        ref: ref,
-                                        roster: roster,
-                                        expense: expense,
-                                      ),
-                                      onDelete: () => _deleteExpense(
-                                        context: context,
-                                        ref: ref,
-                                        groupId: roster.id,
-                                        expense: expense,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      : _buildExpenseList(roster, currentUserId, isHost),
+                  data: (_) => _buildExpenseList(roster, currentUserId, isHost),
                 ),
               ),
             ],
@@ -302,7 +504,7 @@ class _ExpenseSummary extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Total expenses',
+                  'Loaded total',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 4),
@@ -321,7 +523,7 @@ class _ExpenseSummary extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Your balance',
+                  'Your balance (loaded)',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 4),
@@ -429,6 +631,7 @@ Future<void> _deleteExpense({
   required WidgetRef ref,
   required String groupId,
   required GroupExpense expense,
+  required VoidCallback onDeleted,
 }) async {
   final confirmed = await showDialog<bool>(
     context: context,
@@ -452,7 +655,8 @@ Future<void> _deleteExpense({
     final api = ref.read(groupsApiProvider);
     await api.deleteExpense(groupId: groupId, expenseId: expense.id);
     if (!context.mounted) return;
-    ref.invalidate(groupExpensesProvider(groupId));
+    onDeleted();
+    ref.invalidate(groupExpensesProvider);
     ref.invalidate(groupRosterProvider(groupId));
     ScaffoldMessenger.of(
       context,

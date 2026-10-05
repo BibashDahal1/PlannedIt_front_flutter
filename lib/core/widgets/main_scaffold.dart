@@ -47,53 +47,58 @@ class MainScaffold extends ConsumerWidget {
           child: SizedBox(
             height: 66,
             child: Row(
-              children: List.generate(5, (index) {
+              children: List.generate(_tabs.length, (index) {
                 final selected = navigationShell.currentIndex == index;
                 return Expanded(
-                  child: InkWell(
-                    onTap: () => navigationShell.goBranch(
-                      index,
-                      initialLocation: index == navigationShell.currentIndex,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Opacity(
-                          opacity: selected ? 1 : 0.45,
-                          child: index == 2
-                              ? const _PlusGlyph()
-                              : index == 3
-                              ? Badge(
-                                  isLabelVisible: unreadChatCount > 0,
-                                  label: Text(
-                                    unreadChatCount > 99
-                                        ? '99+'
-                                        : '$unreadChatCount',
-                                  ),
-                                  child: SketchIcon(
-                                    _tabs[index].asset as String,
-                                    size: 24,
-                                  ),
-                                )
-                              : SketchIcon(
-                                  _tabs[index].asset as String,
+                  child: Semantics(
+                    button: true,
+                    selected: selected,
+                    label: _tabs[index].label,
+                    child: InkWell(
+                      onTap: () => navigationShell.goBranch(
+                        index,
+                        initialLocation: index == navigationShell.currentIndex,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Opacity(
+                            opacity: selected ? 1 : 0.45,
+                            child: index == 2
+                                ? const _PlusGlyph()
+                                : index == 3
+                                ? Badge(
+                                    isLabelVisible: unreadChatCount > 0,
+                                    label: Text(
+                                      unreadChatCount > 99
+                                          ? '99+'
+                                          : '$unreadChatCount',
+                                    ),
+                                    child: SketchIcon(
+                                      _tabs[index].asset!,
+                                      size: 24,
+                                    ),
+                                  )
+                                :                                 SketchIcon(
+                                  _tabs[index].asset!,
                                   size: 24,
                                 ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _tabs[index].label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: selected
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _tabs[index].label,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: selected
                                 ? FontWeight.w700
                                 : FontWeight.w500,
-                            color: SketchColors.ink.withValues(
-                              alpha: selected ? 1 : 0.45,
+                              color: SketchColors.ink.withValues(
+                                alpha: selected ? 1 : 0.45,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );

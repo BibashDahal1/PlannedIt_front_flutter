@@ -158,10 +158,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Image.asset(
-                'assets/images/sketch/app_logo_mark.png',
-                width: 30,
-                filterQuality: FilterQuality.high,
+              ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  SketchColors.ink,
+                  BlendMode.srcIn,
+                ),
+                child: Image.asset(
+                  'assets/images/sketch/app_logo_mark.png',
+                  width: 30,
+                  filterQuality: FilterQuality.high,
+                ),
               ),
               const SizedBox(width: 8),
               Text('PlannedIT', style: AppTheme.heading(size: 32)),
@@ -310,7 +316,7 @@ class _CategoryRail extends ConsumerWidget {
                 seed: c.id,
                 isSelected: selected == c.id,
                 label: c.name,
-                icon: CategoryIcon(c.name, size: 34),
+                icon: CategoryIcon(c.name, iconKey: c.iconKey, size: 34),
                 onTap: () => ref
                     .read(selectedCategoryFilterProvider.notifier)
                     .select(selected == c.id ? null : c.id),
@@ -358,7 +364,10 @@ class _ActivityCardState extends ConsumerState<_ActivityCard> {
     final a = widget.activity;
     final currentUserId = ref.watch(authControllerProvider).value?.user?.id;
     final isHost = currentUserId != null && currentUserId == a.host.id;
-    final iconAsset = sketchAssetForCategory(a.category.name);
+    final iconAsset = sketchAssetForCategory(
+      a.category.name,
+      iconKey: a.category.iconKey,
+    );
     final start = a.scheduledStart;
     final when =
         'Today, ${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';

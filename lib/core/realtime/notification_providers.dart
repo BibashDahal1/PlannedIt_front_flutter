@@ -86,7 +86,7 @@ class ActivityGroupLinks extends Notifier<Map<String, ActivityGroupLink>> {
           case 'expense_deleted':
             if (event.groupId != null) {
               ref.invalidate(groupRosterProvider(event.groupId!));
-              ref.invalidate(groupExpensesProvider(event.groupId!));
+              ref.invalidate(groupExpensesProvider);
             }
             break;
           case 'activity_deleted':

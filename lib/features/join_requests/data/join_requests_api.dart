@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/network/api_response.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../domain/join_request.dart';
 
@@ -21,16 +22,20 @@ class JoinRequestsApi {
     final response = await _dio.get(
       ApiEndpoints.activityJoinRequests(activityId),
     );
-    return (response.data as List)
-        .map((e) => JoinRequest.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return parseListResponse(
+      response.data,
+      JoinRequest.fromJson,
+      resourceName: 'incoming join requests',
+    );
   }
 
   Future<List<JoinRequest>> fetchMyRequests() async {
     final response = await _dio.get(ApiEndpoints.myJoinRequests);
-    return (response.data as List)
-        .map((e) => JoinRequest.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return parseListResponse(
+      response.data,
+      JoinRequest.fromJson,
+      resourceName: 'join requests',
+    );
   }
 
   Future<JoinRequest> fetchJoinRequestDetail(String id) async {

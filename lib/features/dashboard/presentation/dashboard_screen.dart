@@ -5,6 +5,7 @@ import '../../../core/network/api_error.dart';
 import '../../../core/theme/sketch_colors.dart';
 import '../../../core/widgets/sketch_box.dart';
 import '../../../core/widgets/sketch_icon.dart';
+import '../../join_requests/presentation/requests_screen.dart';
 import '../../groups/data/groups_providers.dart';
 import '../../groups/domain/group_summary.dart';
 import 'cost_management_tab.dart';
@@ -110,7 +111,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void _selectTab(int index) {
     final groupId = _selectedGroupId;
     if (index == 1 && groupId != null) {
-      ref.invalidate(groupExpensesProvider(groupId));
+      ref.invalidate(groupExpensesProvider);
     }
     setState(() => _selectedIndex = index);
   }
@@ -119,106 +120,113 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final groupsAsync = ref.watch(myGroupsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Activity Dashboard')),
-      body: groupsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => DashboardError(
-          message: 'Could not load groups: ${extractApiErrorMessage(error)}',
-          onRetry: () => ref.invalidate(myGroupsProvider),
-        ),
-        data: (groups) {
-          if (groups.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('Your activity groups will appear here.'),
+      appBar: _selectedIndex == 2
+          ? null
+          : AppBar(title: const Text('Activity Dashboard')),
+      body: _selectedIndex == 2
+          ? const RequestsScreen()
+          : groupsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => DashboardError(
+                message:
+                    'Could not load groups: ${extractApiErrorMessage(error)}',
+                onRetry: () => ref.invalidate(myGroupsProvider),
               ),
-            );
-          }
+              data: (groups) {
+                if (groups.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('Your activity groups will appear here.'),
+                    ),
+                  );
+                }
 
-          final selectedGroup = groups.firstWhere(
-            (group) => group.id == _selectedGroupId,
-            orElse: () => groups.first,
-          );
-          if (_selectedGroupId != selectedGroup.id) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() => _selectedGroupId = selectedGroup.id);
-              }
-            });
-          }
+                final selectedGroup = groups.firstWhere(
+                  (group) => group.id == _selectedGroupId,
+                  orElse: () => groups.first,
+                );
+                if (_selectedGroupId != selectedGroup.id) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() => _selectedGroupId = selectedGroup.id);
+                    }
+                  });
+                }
 
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: SketchBox(
-                  seed: selectedGroup.id.hashCode,
-                  radius: 16,
-                  padding: const EdgeInsets.all(8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => _chooseGroup(groups, selectedGroup.id),
-                    child: Row(
-                      children: [
-                        SketchBox(
-                          seed: selectedGroup.id.hashCode + 1,
-                          radius: 12,
-                          width: 48,
-                          height: 48,
-                          child: Center(
-                            child: GroupActivityIcon(
-                              groupId: selectedGroup.id,
-                              size: 34,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      child: SketchBox(
+                        seed: selectedGroup.id.hashCode,
+                        radius: 16,
+                        padding: const EdgeInsets.all(8),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _chooseGroup(groups, selectedGroup.id),
+                          child: Row(
                             children: [
-                              Text(
-                                'Activity group',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                              Text(
-                                selectedGroup.activityTitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
+                              SketchBox(
+                                seed: selectedGroup.id.hashCode + 1,
+                                radius: 12,
+                                width: 48,
+                                height: 48,
+                                child: Center(
+                                  child: GroupActivityIcon(
+                                    groupId: selectedGroup.id,
+                                    size: 34,
+                                  ),
                                 ),
                               ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Activity group',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
+                                    ),
+                                    Text(
+                                      selectedGroup.activityTitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.expand_more),
                             ],
                           ),
                         ),
-                        const Icon(Icons.expand_more),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: IndexedStack(
-                  index: _selectedIndex,
-                  children: [
-                    TeamManagementTab(
-                      key: ValueKey('teams-${selectedGroup.id}'),
-                      groupId: selectedGroup.id,
-                    ),
-                    CostManagementTab(
-                      key: ValueKey('costs-${selectedGroup.id}'),
-                      groupId: selectedGroup.id,
-                      isActive: _selectedIndex == 1,
+                    Expanded(
+                      child: IndexedStack(
+                        index: _selectedIndex,
+                        children: [
+                          TeamManagementTab(
+                            key: ValueKey('teams-${selectedGroup.id}'),
+                            groupId: selectedGroup.id,
+                          ),
+                          CostManagementTab(
+                            key: ValueKey('costs-${selectedGroup.id}'),
+                            groupId: selectedGroup.id,
+                            isActive: _selectedIndex == 1,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+                );
+              },
+            ),
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: SketchColors.ink, width: 1.4)),
@@ -226,7 +234,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         child: SafeArea(
           top: false,
           child: SizedBox(
-            height: 100,
+            height: 104,
             child: Row(
               children: [
                 Expanded(
@@ -247,6 +255,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                   ),
                 ),
+                Expanded(
+                  child: Center(
+                    child: _DashboardNavItem(
+                      imagePath: 'assets/images/sketch/Requests.png',
+                      label: 'Incoming Requests',
+                      selected: _selectedIndex == 2,
+                      onTap: () => _selectTab(2),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -259,25 +277,47 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 /// The active tab is indicated by the icon only; SketchIcon applies the
 /// current theme's ink color without changing the tab background.
 class _DashboardNavItem extends StatelessWidget {
-  final String asset;
+  final String? asset;
+  final String? imagePath;
+  final String label;
   final bool selected;
   final VoidCallback onTap;
 
   const _DashboardNavItem({
-    required this.asset,
+    this.asset,
+    this.imagePath,
+    this.label = '',
     required this.selected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Opacity(
-          opacity: selected ? 1 : 0.55,
-          child: SketchIcon(asset, size: 78),
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Opacity(
+            opacity: selected ? 1 : 0.55,
+            child: imagePath != null
+                ? ColorFiltered(
+                    colorFilter: ColorFilter.mode(
+                      SketchColors.ink,
+                      BlendMode.srcIn,
+                    ),
+                    child: Image.asset(
+                      imagePath!,
+                      width: 88,
+                      height: 92,
+                      fit: BoxFit.contain,
+                    ),
+                  )
+                : SketchIcon(asset!, size: 78),
+          ),
         ),
       ),
     );

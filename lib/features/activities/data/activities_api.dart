@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../../../core/network/api_response.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../shared/models/category.dart';
 import '../domain/activity_post.dart';
@@ -11,9 +12,13 @@ class ActivitiesApi {
 
   Future<List<Category>> fetchCategories() async {
     final response = await _dio.get(ApiEndpoints.categories);
-    return (response.data as List)
-        .map((e) => Category.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final categories =
+        parseListResponse(
+          response.data,
+          Category.fromJson,
+          resourceName: 'categories',
+        ).toList()..sort((a, b) => a.id.compareTo(b.id));
+    return categories;
   }
 
   Future<String> createActivity(CreateActivityInput input) async {
@@ -29,9 +34,11 @@ class ActivitiesApi {
       ApiEndpoints.activities,
       queryParameters: categoryId != null ? {'category': categoryId} : null,
     );
-    return (response.data as List)
-        .map((e) => ActivityPost.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return parseListResponse(
+      response.data,
+      (json) => ActivityPost.fromJson(json),
+      resourceName: 'activities',
+    );
   }
 
   Future<ActivityPost> fetchActivityDetail(String id) async {
@@ -41,14 +48,11 @@ class ActivitiesApi {
 
   Future<List<ActivityPost>> fetchMyActivities() async {
     final response = await _dio.get(ApiEndpoints.myActivities);
-    return (response.data as List)
-        .map(
-          (e) => ActivityPost.fromJson(
-            e as Map<String, dynamic>,
-            exactLocation: true,
-          ),
-        )
-        .toList();
+    return parseListResponse(
+      response.data,
+      (json) => ActivityPost.fromJson(json, exactLocation: true),
+      resourceName: 'my activities',
+    );
   }
 
   Future<ActivityPost> updateActivity(
@@ -83,11 +87,13 @@ class ActivitiesApi {
         'lat': lat,
         'lng': lng,
         'radius_km': radiusKm,
-        if (categoryId != null) 'category': categoryId,
+        'category': ?categoryId,
       },
     );
-    return (response.data as List)
-        .map((e) => ActivityPost.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return parseListResponse(
+      response.data,
+      (json) => ActivityPost.fromJson(json),
+      resourceName: 'nearby activities',
+    );
   }
 }

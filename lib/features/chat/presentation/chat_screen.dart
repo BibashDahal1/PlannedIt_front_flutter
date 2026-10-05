@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/realtime/notification_inbox_provider.dart';
-import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/sketch_colors.dart';
+import '../../../core/widgets/sketch_box.dart';
+import '../../../core/widgets/sketch_button.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../data/chat_providers.dart';
 import '../data/chat_socket_service.dart';
@@ -49,6 +51,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Future<void> _init() async {
     if (_isInitializing) return;
     _isInitializing = true;
+    if (mounted) {
+      setState(() {
+        _isLoadingHistory = true;
+        _loadError = null;
+      });
+    }
     try {
       final history = await ref
           .read(chatApiProvider)
@@ -213,14 +221,83 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final currentUserId = ref.watch(authControllerProvider).value?.user?.id;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('Chat')),
       body: Column(
         children: [
           Expanded(
             child: _isLoadingHistory
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(
+                    child: SketchBox(
+                      radius: 18,
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(
+                            color: SketchColors.ink,
+                            strokeWidth: 2,
+                          ),
+                          const SizedBox(height: 12),
+                          const Text('Loading conversation...'),
+                        ],
+                      ),
+                    ),
+                  )
                 : _loadError != null
-                ? Center(child: Text('Could not load chat: $_loadError'))
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: SketchBox(
+                        radius: 18,
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.chat_bubble_outline, size: 34),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Could not load chat: $_loadError',
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            SketchButton(
+                              label: 'Retry',
+                              icon: const Icon(Icons.refresh),
+                              onPressed: _init,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                : _messages.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: SketchBox(
+                        radius: 18,
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.forum_outlined, size: 36),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Start the conversation',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Send a message to your group.',
+                              style: TextStyle(color: SketchColors.inkFaint),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
@@ -232,44 +309,47 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         alignment: isMine
                             ? Alignment.centerRight
                             : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
+                        child: ConstrainedBox(
                           constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.72,
+                            maxWidth: MediaQuery.of(context).size.width * 0.78,
                           ),
-                          decoration: BoxDecoration(
-                            color: isMine
-                                ? AppColors.primary
-                                : AppColors.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: isMine
-                                ? null
-                                : Border.all(color: AppColors.border),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (!isMine)
-                                Text(
-                                  message.senderName,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              Text(
-                                message.content,
-                                style: TextStyle(
-                                  color: isMine
-                                      ? Colors.white
-                                      : AppColors.textPrimary,
-                                ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: SketchBox(
+                              seed: message.id.hashCode,
+                              radius: 16,
+                              fill: isMine ? SketchColors.ink : null,
+                              strokeColor: isMine ? SketchColors.ink : null,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
                               ),
-                            ],
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (!isMine)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 3),
+                                      child: Text(
+                                        message.senderName,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: SketchColors.inkFaint,
+                                        ),
+                                      ),
+                                    ),
+                                  Text(
+                                    message.content,
+                                    style: TextStyle(
+                                      color: isMine
+                                          ? SketchColors.paper
+                                          : SketchColors.ink,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       );
@@ -279,36 +359,88 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           // Small, non-blocking strip -- never covers or disables the
           // input, and only appears after the debounce window above.
           if (_showConnectingBanner)
-            Container(
-              width: double.infinity,
-              color: AppColors.primarySoft,
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: const Text(
-                'Reconnecting...',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.primary, fontSize: 11),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+              child: SketchBox(
+                seed: 91,
+                radius: 12,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 13,
+                      height: 13,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: SketchColors.inkFaint,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Reconnecting...',
+                      style: TextStyle(
+                        color: SketchColors.inkFaint,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: const InputDecoration(
-                        hintText: 'Type a message...',
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+              child: SketchBox(
+                seed: 92,
+                radius: 18,
+                padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        textCapitalization: TextCapitalization.sentences,
+                        minLines: 1,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          hintText: 'Type a message...',
+                          hintStyle: TextStyle(color: SketchColors.inkFaint),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          isDense: true,
+                        ),
+                        onSubmitted: (_) => _send(),
                       ),
-                      onSubmitted: (_) => _send(),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.send),
-                    onPressed: _send,
-                    color: AppColors.primary,
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    SketchBox(
+                      seed: 93,
+                      radius: 13,
+                      fill: SketchColors.ink,
+                      padding: EdgeInsets.zero,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: _send,
+                          child: Padding(
+                            padding: const EdgeInsets.all(11),
+                            child: Icon(
+                              Icons.send_rounded,
+                              size: 20,
+                              color: SketchColors.paper,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

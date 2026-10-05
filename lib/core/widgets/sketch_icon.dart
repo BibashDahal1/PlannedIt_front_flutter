@@ -26,10 +26,26 @@ class SketchIcon extends StatelessWidget {
   }
 }
 
-/// Maps a backend category name to one of the extracted hand-drawn
-/// icons. Every category the API currently returns has a real match;
-/// `more_dots` covers "Other" and anything unrecognized.
-String? sketchAssetForCategory(String categoryName) {
+/// Maps backend category icon keys to the extracted hand-drawn assets.
+/// Category names remain a fallback for older callers without an icon key.
+String? sketchAssetForCategory(String categoryName, {String? iconKey}) {
+  switch (iconKey) {
+    case 'sports_soccer':
+      return 'soccer';
+    case 'sports_basketball':
+      return 'basketball';
+    case 'hiking':
+      return 'hiking';
+    case 'casino':
+      return 'board_games';
+    case 'school':
+      return 'study_group';
+    case 'volunteer_activism':
+      return 'volunteering';
+    case 'more_horiz':
+      return 'more_dots';
+  }
+
   switch (categoryName) {
     case 'Futsal':
       return 'soccer';
@@ -56,13 +72,19 @@ String? sketchAssetForCategory(String categoryName) {
 /// fix only has to happen once.
 class CategoryIcon extends StatelessWidget {
   final String categoryName;
+  final String? iconKey;
   final double size;
-  const CategoryIcon(this.categoryName, {super.key, this.size = 26});
+  const CategoryIcon(
+    this.categoryName, {
+    super.key,
+    this.iconKey,
+    this.size = 26,
+  });
 
   @override
   Widget build(BuildContext context) {
     Theme.of(context); // rebuild on theme toggle even when const
-    final asset = sketchAssetForCategory(categoryName);
+    final asset = sketchAssetForCategory(categoryName, iconKey: iconKey);
     return asset != null
         ? SketchIcon(asset, size: size)
         : SketchCircleGlyph(size: size);

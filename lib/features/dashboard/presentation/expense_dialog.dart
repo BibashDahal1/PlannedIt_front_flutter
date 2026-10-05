@@ -402,7 +402,7 @@ Future<void> showExpenseDialog({
       }
     }
     if (!context.mounted) return;
-    ref.invalidate(groupExpensesProvider(roster.id));
+    ref.invalidate(groupExpensesProvider);
     ref.invalidate(groupRosterProvider(roster.id));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

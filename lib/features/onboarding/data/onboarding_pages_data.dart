@@ -2,21 +2,27 @@ import '../domain/onboarding_page_data.dart';
 
 const List<OnboardingPageData> onboardingPages = [
   OnboardingPageData(
-    imagePath: '../../../../images/onboarding/onboarding_1_illustration.png',
-    title: 'Play Together',
+    imagePath: 'assets/images/sketch/onb2_people.png',
+    title: 'Find your people',
     description:
-        'Find people who share your interests and turn your plans into real moments.',
+        'From sports and study groups to volunteering and more, discover activities that match your interests.',
   ),
   OnboardingPageData(
-    imagePath: 'assets/images/onboarding/onboarding_2_illustration.png',
-    title: 'Explore Activities',
+    imagePath: 'assets/images/sketch/onb2_connect.png',
+    title: 'Join and Connect',
     description:
-        'Discover nearby events, from sports to games, study groups and more.',
+        'Browse activities by location and time. See who’s joining, check details, and connect with people nearby.',
   ),
   OnboardingPageData(
-    imagePath: 'assets/images/onboarding/onboarding_3_illustration.png',
-    title: 'Build Trust',
+    imagePath: 'assets/images/sketch/onb2_organize.png',
+    title: 'Stay Organized',
     description:
-        'Verified profiles, ratings and moderation keep your community safe.',
+        'Manage your team, budget, and plans all in one place. Work together, keep track, and get things done.',
+  ),
+  OnboardingPageData(
+    imagePath: 'assets/images/sketch/onb2_plan.png',
+    title: 'Turn ideas into plans',
+    description:
+        'Whether it’s a game, a project, or a community event, PlannedIT helps you plan it, do it, and make it happen.',
   ),
 ];
