@@ -33,9 +33,23 @@ class ApiEndpoints {
   static String groupExpense(String groupId, String expenseId) =>
       '/groups/$groupId/expenses/$expenseId';
 
+  // Social groups (NEW)
+  static const String socialGroups = '/social-groups';
+  static const String socialGroupEligibleMembers =
+      '/social-groups/eligible-members';
+  static const String mySocialGroups = '/social-groups/mine';
+  static String socialGroupDetail(String id) => '/social-groups/$id';
+  static String socialGroupMembers(String id) => '/social-groups/$id/members';
+  static String socialGroupMember(String id, String userId) =>
+      '/social-groups/$id/members/$userId';
+  static String socialGroupChatToken(String id) =>
+      '/social-groups/$id/chat-token';
+  static String socialGroupMessages(String id) => '/social-groups/$id/messages';
+
   // Trust / ratings / moderation
   static String activityComplete(String activityId) =>
       '/activities/$activityId/complete';
+  static const String pendingRatings = '/ratings/pending';
   static String activityRatings(String activityId) =>
       '/activities/$activityId/ratings';
   static String publicProfile(String userId) => '/users/$userId/public-profile';

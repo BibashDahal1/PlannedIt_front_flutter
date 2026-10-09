@@ -14,6 +14,7 @@ import '../../features/auth/presentation/otp_verify_screen.dart';
 import '../../features/auth/domain/auth_flow_mode.dart';
 import '../../features/activities/presentation/activity_detail_screen.dart';
 import '../../features/join_requests/presentation/incoming_requests_screen.dart';
+import '../../features/join_requests/domain/requester_preview.dart';
 import '../../features/trust/presentation/public_profile_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
@@ -62,6 +63,9 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => PublicProfileScreen(
         userId: state.pathParameters['userId']!,
         activityId: state.uri.queryParameters['activityId'],
+        requester: state.extra is RequesterPreview
+            ? state.extra as RequesterPreview
+            : null,
       ),
     ),
     GoRoute(
@@ -70,12 +74,12 @@ final GoRouter appRouter = GoRouter(
           ChatScreen(groupId: state.pathParameters['groupId']!),
     ),
     GoRoute(
-      path: '/dashboard',
-      builder: (context, state) => const DashboardScreen(),
-    ),
-    GoRoute(
       path: '/notifications',
       builder: (context, state) => const NotificationsScreen(),
+    ),
+    GoRoute(
+      path: '/dashboard',
+      builder: (context, state) => const DashboardScreen(),
     ),
     GoRoute(
       path: '/legal/:documentType',
@@ -119,6 +123,7 @@ final GoRouter appRouter = GoRouter(
             ),
           ],
         ),
+
         StatefulShellBranch(
           routes: [
             GoRoute(

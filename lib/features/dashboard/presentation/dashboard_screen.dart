@@ -8,6 +8,8 @@ import '../../../core/widgets/sketch_icon.dart';
 import '../../join_requests/presentation/requests_screen.dart';
 import '../../groups/data/groups_providers.dart';
 import '../../groups/domain/group_summary.dart';
+import '../../groups/presentation/groups_screen.dart'; // NEW: group chats screen
+import 'activity_ratings_tab.dart';
 import 'cost_management_tab.dart';
 import 'dashboard_widgets.dart';
 import 'team_management_tab.dart';
@@ -119,12 +121,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final groupsAsync = ref.watch(myGroupsProvider);
+
+    // Tabs 3 (requests) and 4 (group chats) are separate screens that
+    // replace the dashboard body. If GroupsScreen has no AppBar of its own,
+    // change this to `_selectedIndex == 3` so the dashboard bar still shows.
+    final isSeparateScreen = _selectedIndex == 3 || _selectedIndex == 4;
+
     return Scaffold(
-      appBar: _selectedIndex == 2
+      appBar: isSeparateScreen
           ? null
           : AppBar(title: const Text('Activity Dashboard')),
-      body: _selectedIndex == 2
+      body: _selectedIndex == 3
           ? const RequestsScreen()
+          : _selectedIndex == 4
+          ? const GroupsScreen()
           : groupsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => DashboardError(
@@ -220,6 +230,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             groupId: selectedGroup.id,
                             isActive: _selectedIndex == 1,
                           ),
+                          ActivityRatingsTab(
+                            key: ValueKey('ratings-${selectedGroup.id}'),
+                            groupId: selectedGroup.id,
+                          ),
                         ],
                       ),
                     ),
@@ -234,13 +248,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         child: SafeArea(
           top: false,
           child: SizedBox(
-            height: 104,
+            height: 96,
             child: Row(
               children: [
                 Expanded(
                   child: Center(
                     child: _DashboardNavItem(
-                      asset: 'dashboard_team_full',
+                      imagePath: 'assets/images/sketch/dashboard_groups.png',
+                      label: 'Groups',
                       selected: _selectedIndex == 0,
                       onTap: () => _selectTab(0),
                     ),
@@ -250,6 +265,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: Center(
                     child: _DashboardNavItem(
                       asset: 'dashboard_cost_full',
+                      label: 'Costs',
                       selected: _selectedIndex == 1,
                       onTap: () => _selectTab(1),
                     ),
@@ -258,10 +274,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 Expanded(
                   child: Center(
                     child: _DashboardNavItem(
-                      imagePath: 'assets/images/sketch/Requests.png',
-                      label: 'Incoming Requests',
+                      imagePath: 'assets/images/sketch/ratings_full.png',
+                      label: 'Rate members',
                       selected: _selectedIndex == 2,
                       onTap: () => _selectTab(2),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: _DashboardNavItem(
+                      imagePath: 'assets/images/sketch/Requests.png',
+                      label: 'Incoming Requests',
+                      selected: _selectedIndex == 3,
+                      onTap: () => _selectTab(3),
+                    ),
+                  ),
+                ),
+                // NEW: Group chats tab (opens GroupsScreen)
+                Expanded(
+                  child: Center(
+                    child: _DashboardNavItem(
+                      asset: 'chat_management',
+                      label: 'Group chats',
+                      selected: _selectedIndex == 4,
+                      onTap: () => _selectTab(4),
                     ),
                   ),
                 ),
@@ -300,7 +337,7 @@ class _DashboardNavItem extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
           child: Opacity(
             opacity: selected ? 1 : 0.55,
             child: imagePath != null
@@ -311,12 +348,12 @@ class _DashboardNavItem extends StatelessWidget {
                     ),
                     child: Image.asset(
                       imagePath!,
-                      width: 88,
-                      height: 92,
+                      width: 56, // reduced from 70 to fit five tabs
+                      height: 62, // reduced from 76
                       fit: BoxFit.contain,
                     ),
                   )
-                : SketchIcon(asset!, size: 78),
+                : SketchIcon(asset!, size: 52), // reduced from 66
           ),
         ),
       ),

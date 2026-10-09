@@ -8,9 +8,12 @@ import '../../../core/theme/sketch_colors.dart';
 import '../../../core/widgets/sketch_box.dart';
 import '../../../core/widgets/sketch_button.dart';
 import '../../../core/widgets/sketch_icon.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../groups/data/groups_providers.dart';
+import '../data/group_applications.dart'; // NEW
 import '../data/join_requests_providers.dart';
 import '../domain/join_request.dart';
+import 'group_applicants_picker.dart'; // NEW
 
 class IncomingRequestsScreen extends ConsumerWidget {
   final String activityId;
@@ -135,6 +138,10 @@ class _IncomingRequestCard extends ConsumerStatefulWidget {
 class _IncomingRequestCardState extends ConsumerState<_IncomingRequestCard> {
   bool _isProcessing = false;
 
+  // NEW: host's selection for a group application.
+  final Set<String> _selectedApplicants = {};
+  bool _selectionInitialized = false;
+
   Future<void> _accept() async {
     setState(() => _isProcessing = true);
     try {
@@ -184,6 +191,69 @@ class _IncomingRequestCardState extends ConsumerState<_IncomingRequestCard> {
     }
   }
 
+  /// NEW: accept only the applicants the host selected from a group request.
+  Future<void> _acceptSelectedApplicants(int? spots) async {
+    if (_selectedApplicants.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Select at least one person to accept.')),
+      );
+      return;
+    }
+    if (spots != null && _selectedApplicants.length > spots) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Only $spots spot${spots == 1 ? '' : 's'} left. '
+            'Deselect ${_selectedApplicants.length - spots} to continue.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isProcessing = true);
+    try {
+      final activityId = widget.request.activityPostId;
+      final groupId = await ref
+          .read(groupApplicationsRepositoryProvider)
+          .acceptSelected(
+            requestId: widget.request.id,
+            memberIds: _selectedApplicants.toList(),
+          );
+      ref.invalidate(myGroupsProvider);
+      ref.invalidate(groupApplicationProvider(widget.request.id));
+      if (activityId != null)
+        ref.invalidate(spotsRemainingProvider(activityId));
+      widget.onHandled();
+
+      if (groupId != null && mounted) {
+        if (activityId != null) {
+          ref
+              .read(activityGroupLinksProvider.notifier)
+              .recordGroupLink(
+                activityId,
+                groupId,
+                widget.request.activityTitle,
+              );
+        }
+        context.push('/group/$groupId/chat');
+      }
+    } catch (e) {
+      // Stale or invalid selection (400): keep the selection open and
+      // refresh capacity so the host can adjust.
+      final activityId = widget.request.activityPostId;
+      if (activityId != null)
+        ref.invalidate(spotsRemainingProvider(activityId));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(extractApiErrorMessage(e))));
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
   Future<void> _decline() async {
     setState(() => _isProcessing = true);
     try {
@@ -201,10 +271,36 @@ class _IncomingRequestCardState extends ConsumerState<_IncomingRequestCard> {
     }
   }
 
+  void _toggleApplicant(String id) {
+    setState(() {
+      if (!_selectedApplicants.remove(id)) _selectedApplicants.add(id);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final r = widget.request;
     final isPending = r.status == 'pending';
+
+    // NEW: is this a social-group application? (null = individual request)
+    final groupAsync = ref.watch(groupApplicationProvider(r.id));
+    final groupApp = groupAsync.value;
+    final activityId = r.activityPostId;
+    final spotsAsync = activityId == null
+        ? null
+        : ref.watch(spotsRemainingProvider(activityId));
+    final spots = spotsAsync?.value;
+    final spotsReady = spotsAsync == null || !spotsAsync.isLoading;
+
+    // Pre-select pending applicants up to the spots left, once.
+    if (groupApp != null && spotsReady && !_selectionInitialized) {
+      final pending = groupApp.applicants.where((a) => a.isPending).toList();
+      final take = spots == null
+          ? pending.length
+          : spots.clamp(0, pending.length);
+      _selectedApplicants.addAll(pending.take(take).map((a) => a.id));
+      _selectionInitialized = true;
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -223,7 +319,12 @@ class _IncomingRequestCardState extends ConsumerState<_IncomingRequestCard> {
                   radius: 13,
                   width: 46,
                   height: 46,
-                  child: const Center(child: SketchIcon('profile', size: 28)),
+                  child: Center(
+                    child: UserAvatar(
+                      avatarUrl: r.requester?.avatar,
+                      radius: 21,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -301,6 +402,28 @@ class _IncomingRequestCardState extends ConsumerState<_IncomingRequestCard> {
                 ),
               ),
             ],
+            // NEW: group applicants (selectable while pending, read-only after).
+            if (groupApp != null) ...[
+              const SizedBox(height: 12),
+              GroupApplicantsPicker(
+                application: groupApp,
+                spotsRemaining: spots,
+                selected: _selectedApplicants,
+                readOnly: !isPending,
+                onToggle: _toggleApplicant,
+              ),
+            ],
+            if (r.requester != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _viewRequesterProfile,
+                  icon: const Icon(Icons.person_search_outlined),
+                  label: const Text('View requester profile'),
+                ),
+              ),
+            ],
             if (isPending) ...[
               const SizedBox(height: 14),
               Row(
@@ -316,8 +439,16 @@ class _IncomingRequestCardState extends ConsumerState<_IncomingRequestCard> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: SketchButton(
-                      label: 'Accept',
-                      onPressed: _isProcessing ? null : _accept,
+                      label: groupApp != null
+                          ? 'Accept (${_selectedApplicants.length})'
+                          : 'Accept',
+                      // Wait until we know if this is a group request so a
+                      // group application is never accepted without a selection.
+                      onPressed: (_isProcessing || groupAsync.isLoading)
+                          ? null
+                          : groupApp != null
+                          ? () => _acceptSelectedApplicants(spots)
+                          : _accept,
                       isLoading: _isProcessing,
                       filled: true,
                       seed: r.id.hashCode + 4,
@@ -340,4 +471,15 @@ class _IncomingRequestCardState extends ConsumerState<_IncomingRequestCard> {
     'withdrawn' => 'Withdrawn',
     _ => status,
   };
+
+  void _viewRequesterProfile() {
+    final requester = widget.request.requester;
+    if (requester == null) return;
+    final activityId = widget.request.activityPostId;
+    final activityQuery = activityId == null ? '' : '?activityId=$activityId';
+    context.push(
+      '/profile/${requester.id}/public$activityQuery',
+      extra: requester,
+    );
+  }
 }

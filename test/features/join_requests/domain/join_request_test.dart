@@ -4,6 +4,35 @@ import 'package:plannedit_app/features/join_requests/domain/join_request.dart';
 
 void main() {
   group('incoming join request responses', () {
+    test('parses host-visible requester social profiles', () {
+      final request = JoinRequest.fromJson({
+        'id': 'request-1',
+        'requester': {
+          'id': 'user-1',
+          'full_name': 'Example User',
+          'verification_status': 'social',
+          'trust_tier': 'new',
+          'date_joined': '2026-09-24T14:52:23.195144Z',
+          'social_profiles': [
+            {
+              'platform': 'instagram',
+              'username': 'sample_user',
+              'profile_url': 'https://instagram.com/sample_user',
+            },
+          ],
+        },
+        'message': "I'd like to join.",
+        'status': 'pending',
+        'created_at': '2026-10-06T10:00:00Z',
+      });
+
+      expect(request.requester?.socialProfiles, hasLength(1));
+      expect(
+        request.requester?.socialProfiles.single.profileUrl,
+        'https://instagram.com/sample_user',
+      );
+    });
+
     test('parses requests from a paginated results payload', () {
       final requests = parseListResponse(
         {

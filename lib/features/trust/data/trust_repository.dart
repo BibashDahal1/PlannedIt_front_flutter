@@ -1,4 +1,5 @@
 import '../domain/public_profile.dart';
+import '../domain/pending_activity_rating.dart';
 import '../domain/rating.dart';
 import 'trust_api.dart';
 
@@ -8,6 +9,9 @@ class TrustRepository {
 
   Future<void> completeActivity(String activityId) =>
       _api.completeActivity(activityId);
+
+  Future<List<PendingActivityRating>> fetchPendingRatings() =>
+      _api.fetchPendingRatings();
 
   Future<Rating> submitRating(
     String activityId, {

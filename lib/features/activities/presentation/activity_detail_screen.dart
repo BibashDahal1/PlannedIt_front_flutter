@@ -8,7 +8,9 @@ import '../../../core/widgets/sketch_box.dart';
 import '../../../core/widgets/sketch_button.dart';
 import '../../../core/widgets/sketch_icon.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../groups/data/social_groups_providers.dart'; // NEW
 import '../../join_requests/data/join_requests_providers.dart';
+import '../../join_requests/presentation/apply_with_group_sheet.dart'; // NEW
 import '../../trust/data/trust_providers.dart';
 import '../data/activities_providers.dart';
 import '../../../core/realtime/notification_providers.dart';
@@ -51,6 +53,24 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
       ).showSnackBar(SnackBar(content: Text(extractApiErrorMessage(e))));
     } finally {
       if (mounted) setState(() => _isRequesting = false);
+    }
+  }
+
+  /// NEW: a group admin applies with their social group and picks who applies.
+  Future<void> _applyWithGroup() async {
+    final applied = await ApplyWithGroupSheet.show(
+      context,
+      activityId: widget.activityId,
+    );
+    if (applied == true && mounted) {
+      ref.invalidate(myJoinRequestsProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Group request sent! You\'ll be notified once the host responds.',
+          ),
+        ),
+      );
     }
   }
 
@@ -165,6 +185,14 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
   Widget build(BuildContext context) {
     final activityAsync = ref.watch(activityDetailProvider(widget.activityId));
     final authState = ref.watch(authControllerProvider);
+
+    // NEW: only show "Apply with a group" to people who admin a social group.
+    final hasAdminGroup = ref
+        .watch(mySocialGroupsProvider)
+        .maybeWhen(
+          data: (groups) => groups.any((g) => g.isAdmin),
+          orElse: () => false,
+        );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Activity')),
@@ -431,15 +459,25 @@ class _ActivityDetailScreenState extends ConsumerState<ActivityDetailScreen> {
                       seed: activity.id.hashCode + 9,
                     ),
                   ],
-                ] else if (activity.status == 'open')
+                ] else if (activity.status == 'open') ...[
                   SketchButton(
                     label: 'Request to Join',
                     onPressed: _isRequesting ? null : _requestToJoin,
                     filled: true,
                     isLoading: _isRequesting,
                     seed: activity.id.hashCode + 10,
-                  )
-                else
+                  ),
+                  // NEW: shown only to admins of a social group.
+                  if (hasAdminGroup) ...[
+                    const SizedBox(height: 12),
+                    SketchButton(
+                      label: 'Apply with a group',
+                      icon: const Icon(Icons.group_add),
+                      onPressed: _applyWithGroup,
+                      seed: activity.id.hashCode + 12,
+                    ),
+                  ],
+                ] else
                   SketchButton(
                     label: 'This activity is ${activity.status}',
                     onPressed: null,

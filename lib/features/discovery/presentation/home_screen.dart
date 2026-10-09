@@ -368,9 +368,8 @@ class _ActivityCardState extends ConsumerState<_ActivityCard> {
       a.category.name,
       iconKey: a.category.iconKey,
     );
-    final start = a.scheduledStart;
     final when =
-        'Today, ${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
+        '${_formatActivityDateTime(a.scheduledStart)} – ${_formatActivityDateTime(a.scheduledEnd)}';
 
     return GestureDetector(
       onTap: () => context.push('/activity/${a.id}'),
@@ -409,7 +408,11 @@ class _ActivityCardState extends ConsumerState<_ActivityCard> {
                     const SketchIcon('pin', size: 34),
                     a.location.venueName ?? a.location.addressText ?? 'Nearby',
                   ),
-                  _iconLine(const SketchIcon('calendar', size: 34), when),
+                  _iconLine(
+                    const SketchIcon('calendar', size: 34),
+                    when,
+                    maxLines: 2,
+                  ),
                   _iconLine(
                     const SketchIcon('people', size: 34),
                     '${a.totalSpotsNeeded} spots needed',
@@ -465,10 +468,11 @@ class _ActivityCardState extends ConsumerState<_ActivityCard> {
     );
   }
 
-  Widget _iconLine(Widget icon, String text) {
+  Widget _iconLine(Widget icon, String text, {int maxLines = 1}) {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           icon,
           const SizedBox(width: 6),
@@ -476,12 +480,33 @@ class _ActivityCardState extends ConsumerState<_ActivityCard> {
             child: Text(
               text,
               style: const TextStyle(fontSize: 13),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              maxLines: maxLines,
+              overflow: maxLines == 1 ? TextOverflow.ellipsis : null,
             ),
           ),
         ],
       ),
     );
   }
+}
+
+String _formatActivityDateTime(DateTime dateTime) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  final day = dateTime.day.toString().padLeft(2, '0');
+  final hour = dateTime.hour.toString().padLeft(2, '0');
+  final minute = dateTime.minute.toString().padLeft(2, '0');
+  return '$day ${months[dateTime.month - 1]} ${dateTime.year}, $hour:$minute';
 }

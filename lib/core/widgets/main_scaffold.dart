@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../features/groups/data/groups_providers.dart';
 import '../realtime/notification_inbox_provider.dart';
 import 'sketch_icon.dart';
 import '../theme/sketch_colors.dart';
@@ -29,7 +28,6 @@ class MainScaffold extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(themeModeProvider);
-    ref.watch(myGroupsProvider);
     final unreadChatCount = ref.watch(
       notificationInboxProvider.select((inbox) => inbox.unreadChatMessageCount),
     );
@@ -79,10 +77,7 @@ class MainScaffold extends ConsumerWidget {
                                       size: 24,
                                     ),
                                   )
-                                :                                 SketchIcon(
-                                  _tabs[index].asset!,
-                                  size: 24,
-                                ),
+                                : SketchIcon(_tabs[index].asset!, size: 24),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -90,8 +85,8 @@ class MainScaffold extends ConsumerWidget {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                               color: SketchColors.ink.withValues(
                                 alpha: selected ? 1 : 0.45,
                               ),

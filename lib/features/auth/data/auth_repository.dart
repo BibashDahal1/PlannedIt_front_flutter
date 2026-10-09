@@ -8,35 +8,50 @@ class AuthRepository {
   final AuthApi _api;
   final SecureTokenStorage _tokenStorage;
 
-  Future<OtpRequestResult> signupRequestOtp({required String phoneNumber, required String email}) {
+  Future<OtpRequestResult> signupRequestOtp({
+    required String phoneNumber,
+    required String email,
+  }) {
     return _api.signupRequestOtp(phoneNumber: phoneNumber, email: email);
   }
 
   Future<AppUser> signupVerifyOtp({
-  required String phoneNumber,
-  required String code,
-  required String fullName,
-  required DateTime dateOfBirth,
-  required bool agreeToTerms,
-}) async {
-  final result = await _api.signupVerifyOtp(
-    phoneNumber: phoneNumber,
-    code: code,
-    fullName: fullName,
-    dateOfBirth: dateOfBirth,
-    agreeToTerms: agreeToTerms,
-  );
-  await _tokenStorage.saveTokens(access: result.accessToken, refresh: result.refreshToken);
-  return result.user;
-}
+    required String phoneNumber,
+    required String code,
+    required String fullName,
+    required DateTime dateOfBirth,
+    required bool agreeToTerms,
+  }) async {
+    final result = await _api.signupVerifyOtp(
+      phoneNumber: phoneNumber,
+      code: code,
+      fullName: fullName,
+      dateOfBirth: dateOfBirth,
+      agreeToTerms: agreeToTerms,
+    );
+    await _tokenStorage.saveTokens(
+      access: result.accessToken,
+      refresh: result.refreshToken,
+    );
+    return result.user;
+  }
 
   Future<OtpRequestResult> loginRequestOtp({required String phoneNumber}) {
     return _api.loginRequestOtp(phoneNumber: phoneNumber);
   }
 
-  Future<AppUser> loginVerifyOtp({required String phoneNumber, required String code}) async {
-    final result = await _api.loginVerifyOtp(phoneNumber: phoneNumber, code: code);
-    await _tokenStorage.saveTokens(access: result.accessToken, refresh: result.refreshToken);
+  Future<AppUser> loginVerifyOtp({
+    required String phoneNumber,
+    required String code,
+  }) async {
+    final result = await _api.loginVerifyOtp(
+      phoneNumber: phoneNumber,
+      code: code,
+    );
+    await _tokenStorage.saveTokens(
+      access: result.accessToken,
+      refresh: result.refreshToken,
+    );
     return result.user;
   }
 
@@ -44,21 +59,21 @@ class AuthRepository {
   Future<AppUser?> restoreSession() async {
     final access = await _tokenStorage.accessToken;
     if (access == null) return null;
-    try {
-      return await _api.fetchMe();
-    } catch (_) {
-      await _tokenStorage.clear();
-      return null;
-    }
+    return _api.fetchMe();
   }
 
-  Future<AppUser> updateProfileText(Map<String, dynamic> patch) => _api.updateMeText(patch);
+  Future<AppUser> updateProfileText(Map<String, dynamic> patch) =>
+      _api.updateMeText(patch);
 
-Future<AppUser> updateProfileWithAvatar({
-  String? fullName,
-  required List<int> avatarBytes,
-  required String avatarFilename,
-}) => _api.updateMeWithAvatar(fullName: fullName, avatarBytes: avatarBytes, avatarFilename: avatarFilename);
+  Future<AppUser> updateProfileWithAvatar({
+    String? fullName,
+    required List<int> avatarBytes,
+    required String avatarFilename,
+  }) => _api.updateMeWithAvatar(
+    fullName: fullName,
+    avatarBytes: avatarBytes,
+    avatarFilename: avatarFilename,
+  );
 
   Future<void> logout() async {
     final refresh = await _tokenStorage.refreshToken;
@@ -72,5 +87,5 @@ Future<AppUser> updateProfileWithAvatar({
     await _tokenStorage.clear();
   }
 
-Future<AppUser> fetchCurrentUser() => _api.fetchMe();
+  Future<AppUser> fetchCurrentUser() => _api.fetchMe();
 }

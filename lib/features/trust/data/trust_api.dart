@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../domain/public_profile.dart';
+import '../domain/pending_activity_rating.dart';
 import '../domain/rating.dart';
 
 class TrustApi {
@@ -9,6 +10,17 @@ class TrustApi {
 
   Future<void> completeActivity(String activityId) async {
     await _dio.post(ApiEndpoints.activityComplete(activityId));
+  }
+
+  Future<List<PendingActivityRating>> fetchPendingRatings() async {
+    final response = await _dio.get(ApiEndpoints.pendingRatings);
+    return (response.data as List<dynamic>)
+        .map(
+          (activity) => PendingActivityRating.fromJson(
+            activity as Map<String, dynamic>,
+          ),
+        )
+        .toList(growable: false);
   }
 
   Future<Rating> submitRating(
@@ -23,8 +35,8 @@ class TrustApi {
       data: {
         'ratee': rateeId,
         'score': score,
-        if (comment != null && comment.isNotEmpty) 'comment': comment,
-        if (tags != null && tags.isNotEmpty) 'tags': tags,
+        'comment': comment ?? '',
+        'tags': tags ?? const <String>[],
       },
     );
     return Rating.fromJson(response.data as Map<String, dynamic>);

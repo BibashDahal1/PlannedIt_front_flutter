@@ -5,10 +5,13 @@ import '../../../core/realtime/notification_inbox_provider.dart';
 import '../../../core/theme/sketch_colors.dart';
 import '../../../core/widgets/sketch_box.dart';
 import '../../../core/widgets/sketch_button.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../groups/data/groups_providers.dart';
 import '../data/chat_providers.dart';
 import '../data/chat_socket_service.dart';
 import '../domain/chat_message.dart';
+import 'group_members_sheet.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String groupId;
@@ -222,7 +225,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(title: const Text('Chat')),
+      appBar: AppBar(
+        title: const Text('Chat'),
+        actions: [
+          IconButton(
+            tooltip: 'Group members',
+            icon: const Icon(Icons.more_vert),
+            onPressed: _showGroupMembers,
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
@@ -446,6 +458,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showGroupMembers() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => GroupMembersSheet(groupId: widget.groupId),
     );
   }
 }
