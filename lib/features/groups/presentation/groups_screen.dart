@@ -12,6 +12,7 @@ import '../data/groups_providers.dart';
 import '../data/social_groups_providers.dart';
 import '../domain/social_group.dart';
 import 'create_social_group_sheet.dart';
+import 'social_group_invitations_tab.dart';
 import 'social_group_member_tile.dart';
 
 /// Two tabs:
@@ -50,9 +51,9 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen>
     if (created == true) {
       ref.invalidate(mySocialGroupsProvider);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Group created')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Group created. Invitations sent.')),
+        );
       }
     }
   }
@@ -105,10 +106,12 @@ class _GroupChatsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(socialGroupLiveRefreshProvider);
     final socialAsync = ref.watch(mySocialGroupsProvider);
 
     return RefreshIndicator(
       onRefresh: () async {
+        ref.invalidate(socialGroupInvitationsProvider);
         ref.invalidate(mySocialGroupsProvider);
         try {
           await ref.read(mySocialGroupsProvider.future);
@@ -118,6 +121,8 @@ class _GroupChatsTab extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         children: [
+          // Invitations to other people's groups appear first.
+          const SocialGroupInvitationsSection(),
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
             child: Text(
@@ -396,6 +401,21 @@ class _SocialGroupTileState extends State<_SocialGroupTile> {
                         padding: const EdgeInsets.only(bottom: 8),
                         child: SocialGroupMemberTile(member: m),
                       ),
+                    for (final p in group.pendingInvitations)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _PendingInviteRow(groupId: group.id, invite: p),
+                      ),
+                    const SizedBox(height: 4),
+                    SketchButton(
+                      label: group.canChat
+                          ? 'Open chat'
+                          : 'Chat opens when someone accepts',
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      onPressed: group.canChat
+                          ? () => context.push('/social-group/${group.id}/chat')
+                          : null,
+                    ),
                   ],
                 ],
               ),
@@ -429,6 +449,62 @@ class _MessageBox extends StatelessWidget {
           Text(message, textAlign: TextAlign.center),
           const SizedBox(height: 12),
           SketchButton(label: actionLabel, onPressed: onAction),
+        ],
+      ),
+    );
+  }
+}
+
+/// An invited person who has not answered yet (visible to the admin only).
+class _PendingInviteRow extends ConsumerWidget {
+  final String groupId;
+  final SocialGroupPendingInvite invite;
+  const _PendingInviteRow({required this.groupId, required this.invite});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SketchBox(
+      seed: invite.id.hashCode,
+      radius: 14,
+      fill: null,
+      padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+      child: Row(
+        children: [
+          Icon(Icons.hourglass_empty, size: 20, color: SketchColors.inkFaint),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              invite.fullName.isNotEmpty ? invite.fullName : 'Invited person',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: SketchColors.inkFaint,
+              ),
+            ),
+          ),
+          Text(
+            'Invited',
+            style: TextStyle(fontSize: 11, color: SketchColors.inkFaint),
+          ),
+          IconButton(
+            tooltip: 'Cancel invitation',
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: () async {
+              try {
+                await ref
+                    .read(socialGroupsRepositoryProvider)
+                    .cancelInvitation(groupId, invite.id);
+                ref.invalidate(mySocialGroupsProvider);
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(extractApiErrorMessage(e))),
+                  );
+                }
+              }
+            },
+          ),
         ],
       ),
     );

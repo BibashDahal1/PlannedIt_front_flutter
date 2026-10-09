@@ -34,4 +34,37 @@ class ChatApi {
       resourceName: 'chat messages',
     );
   }
+
+  // ---------------- Social group chat (NEW) ----------------
+  // Same shapes as the activity chat, but on the social-group routes.
+  // Never pass an activity group id here, or the other way around.
+
+  Future<(String token, int expiresIn)> fetchSocialChatToken(
+    String socialGroupId,
+  ) async {
+    final response = await _dio.get(
+      ApiEndpoints.socialGroupChatToken(socialGroupId),
+    );
+    return (
+      response.data['channel_token'] as String,
+      response.data['expires_in_seconds'] as int,
+    );
+  }
+
+  Future<List<ChatMessage>> fetchSocialMessages(
+    String socialGroupId, {
+    DateTime? before,
+  }) async {
+    final response = await _dio.get(
+      ApiEndpoints.socialGroupMessages(socialGroupId),
+      queryParameters: before != null
+          ? {'before': before.toUtc().toIso8601String()}
+          : null,
+    );
+    return parseListResponse(
+      response.data,
+      ChatMessage.fromJson,
+      resourceName: 'chat messages',
+    );
+  }
 }

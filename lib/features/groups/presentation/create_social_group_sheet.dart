@@ -227,7 +227,7 @@ class _CreateSocialGroupSheetState
                   Padding(
                     padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
                     child: Text(
-                      'People you have joined activities with. You are added as admin.',
+                      'People you have joined activities with. They get an invitation and join once they accept.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: SketchColors.inkFaint,
                       ),
@@ -322,7 +322,9 @@ class _CreateSocialGroupSheetState
                   ],
                   const SizedBox(height: 12),
                   SketchButton(
-                    label: _submitting ? 'Creating...' : 'Create group',
+                    label: _submitting
+                        ? 'Creating...'
+                        : 'Create & send invites',
                     icon: const Icon(Icons.group_add),
                     filled: true,
                     onPressed: _submit,

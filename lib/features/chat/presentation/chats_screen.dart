@@ -13,6 +13,7 @@ import '../../../core/widgets/user_avatar.dart';
 import '../../groups/data/groups_providers.dart';
 import '../../groups/data/social_groups_providers.dart';
 import '../../groups/domain/social_group.dart';
+import '../../groups/presentation/social_group_invitations_tab.dart';
 
 class ChatsScreen extends ConsumerWidget {
   const ChatsScreen({super.key});
@@ -230,6 +231,7 @@ class _SocialGroupChatsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(socialGroupLiveRefreshProvider);
     final socialAsync = ref.watch(mySocialGroupsProvider);
 
     return socialAsync.when(
@@ -278,6 +280,7 @@ class _SocialGroupChatsTab extends ConsumerWidget {
       ),
       data: (groups) => RefreshIndicator(
         onRefresh: () async {
+          ref.invalidate(socialGroupInvitationsProvider);
           ref.invalidate(mySocialGroupsProvider);
           try {
             await ref.read(mySocialGroupsProvider.future);
@@ -288,6 +291,7 @@ class _SocialGroupChatsTab extends ConsumerWidget {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(24),
                 children: [
+                  const SocialGroupInvitationsSection(),
                   const SizedBox(height: 60),
                   SketchBox(
                     radius: 18,
@@ -317,10 +321,11 @@ class _SocialGroupChatsTab extends ConsumerWidget {
             : ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
-                itemCount: groups.length,
+                itemCount: groups.length + 1,
                 itemBuilder: (context, index) {
-                  final group = groups[index];
-                  return _SocialGroupChatTile(group: group, index: index);
+                  if (index == 0) return const SocialGroupInvitationsSection();
+                  final group = groups[index - 1];
+                  return _SocialGroupChatTile(group: group, index: index - 1);
                 },
               ),
       ),
@@ -334,6 +339,16 @@ class _SocialGroupChatTile extends StatelessWidget {
   const _SocialGroupChatTile({required this.group, required this.index});
 
   String get _memberPreview {
+    if (!group.canChat) {
+      final waiting = group.pendingInvitations
+          .map((p) => p.fullName)
+          .where((n) => n.isNotEmpty)
+          .toList();
+      return waiting.isEmpty
+          ? 'Waiting for members to accept'
+          : 'Waiting for ${waiting.take(2).join(', ')}'
+                '${waiting.length > 2 ? ' +${waiting.length - 2}' : ''}';
+    }
     final names = group.members
         .map((m) => m.fullName)
         .where((n) => n.isNotEmpty)
@@ -358,7 +373,8 @@ class _SocialGroupChatTile extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            onTap: () => _showMembers(context),
+            onTap: () => _open(context),
+            onLongPress: () => _showMembers(context),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
@@ -418,7 +434,10 @@ class _SocialGroupChatTile extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      if (group.isAdmin) ...[
+                      if (!group.canChat) ...[
+                        _RolePill(seed: seed + 3, label: 'Waiting'),
+                        const SizedBox(height: 6),
+                      ] else if (group.isAdmin) ...[
                         _RolePill(seed: seed + 2, label: 'Admin'),
                         const SizedBox(height: 6),
                       ],
@@ -434,8 +453,20 @@ class _SocialGroupChatTile extends StatelessWidget {
     );
   }
 
-  /// TODO: replace with navigation to a social group chat screen once the
-  /// social chat API/socket service exists. For now, show the roster.
+  /// The chat opens only after at least one invited person has accepted.
+  void _open(BuildContext context) {
+    if (group.canChat) {
+      context.push('/social-group/${group.id}/chat');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chat opens once someone accepts the invitation.'),
+        ),
+      );
+    }
+  }
+
+  /// Roster sheet (long-press a group).
   void _showMembers(BuildContext context) {
     final seed = group.id.hashCode;
     showModalBottomSheet<void>(

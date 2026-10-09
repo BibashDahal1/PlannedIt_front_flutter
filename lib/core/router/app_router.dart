@@ -20,6 +20,7 @@ import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/legal/presentation/legal_document_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
+import '../../features/chat/presentation/social_chat_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
@@ -86,6 +87,11 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => LegalDocumentScreen(
         documentType: state.pathParameters['documentType']!,
       ),
+    ),
+    GoRoute(
+      path: '/social-group/:groupId/chat',
+      builder: (context, state) =>
+          SocialChatScreen(groupId: state.pathParameters['groupId']!),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>

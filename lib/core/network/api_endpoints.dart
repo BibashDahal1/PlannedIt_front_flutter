@@ -63,4 +63,14 @@ class ApiEndpoints {
 
   static const String legalDocuments = '/legal';
   static String legalDocument(String documentType) => '/legal/$documentType';
+
+  static const String socialGroupInvitations = '/social-groups/invitations';
+  static String socialGroupInvitationAccept(String id) =>
+      '/social-groups/invitations/$id/accept';
+  static String socialGroupInvitationDecline(String id) =>
+      '/social-groups/invitations/$id/decline';
+  static String socialGroupInvitationCancel(
+    String groupId,
+    String invitationId,
+  ) => '/social-groups/$groupId/invitations/$invitationId';
 }
