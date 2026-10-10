@@ -9,7 +9,10 @@ import '../domain/social_group.dart';
 /// avatar, name, and an "Admin" / "Member" pill.
 class SocialGroupMemberTile extends StatelessWidget {
   final SocialGroupMember member;
-  const SocialGroupMemberTile({super.key, required this.member});
+
+  /// When set (group admin viewing another member) shows a remove button.
+  final VoidCallback? onRemove;
+  const SocialGroupMemberTile({super.key, required this.member, this.onRemove});
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +75,13 @@ class SocialGroupMemberTile extends StatelessWidget {
                     ),
                   ),
                 ),
+          if (onRemove != null)
+            IconButton(
+              tooltip: 'Remove from group',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.person_remove_outlined, size: 20),
+              onPressed: onRemove,
+            ),
         ],
       ),
     );

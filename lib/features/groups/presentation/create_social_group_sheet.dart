@@ -301,7 +301,7 @@ class _CreateSocialGroupSheetState
                             final checked = _selected.contains(m.id);
                             final atLimit =
                                 _selected.length >= _maxInvitees && !checked;
-                            return _MemberRow(
+                            return EligibleMemberRow(
                               member: m,
                               checked: checked,
                               disabled: atLimit,
@@ -356,13 +356,13 @@ class _FieldLabel extends StatelessWidget {
 
 /// One selectable person: sketch card, avatar, name, trust tier pill and a
 /// sketch checkbox. Selected rows get a tinted fill.
-class _MemberRow extends StatelessWidget {
+class EligibleMemberRow extends StatelessWidget {
   final EligibleMember member;
   final bool checked;
   final bool disabled;
   final VoidCallback onTap;
 
-  const _MemberRow({
+  const EligibleMemberRow({
     required this.member,
     required this.checked,
     required this.disabled,

@@ -13,6 +13,7 @@ import '../../../core/widgets/user_avatar.dart';
 import '../../groups/data/groups_providers.dart';
 import '../../groups/data/social_groups_providers.dart';
 import '../../groups/domain/social_group.dart';
+import '../../groups/presentation/social_group_details_sheet.dart';
 import '../../groups/presentation/social_group_invitations_tab.dart';
 
 class ChatsScreen extends ConsumerWidget {
@@ -374,7 +375,8 @@ class _SocialGroupChatTile extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
             onTap: () => _open(context),
-            onLongPress: () => _showMembers(context),
+            onLongPress: () =>
+                SocialGroupDetailsSheet.show(context, groupId: group.id),
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
@@ -464,105 +466,6 @@ class _SocialGroupChatTile extends StatelessWidget {
         ),
       );
     }
-  }
-
-  /// Roster sheet (long-press a group).
-  void _showMembers(BuildContext context) {
-    final seed = group.id.hashCode;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      useSafeArea: true,
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(context).height * 0.75,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    SketchBox(
-                      seed: seed + 1,
-                      radius: 14,
-                      width: 54,
-                      height: 54,
-                      child: const Center(child: SketchIcon('chat', size: 36)),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            group.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          Text(
-                            '${group.memberCount} members',
-                            style: TextStyle(color: SketchColors.inkFaint),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: group.members.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, i) {
-                      final m = group.members[i];
-                      return SketchBox(
-                        seed: m.id.hashCode,
-                        radius: 14,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          children: [
-                            UserAvatar(avatarUrl: m.avatar, radius: 20),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                m.fullName.isNotEmpty
-                                    ? m.fullName
-                                    : 'Unknown member',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            if (m.isAdmin)
-                              _RolePill(
-                                seed: m.id.hashCode + 1,
-                                label: 'Admin',
-                              ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 

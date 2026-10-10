@@ -90,6 +90,26 @@ class SocialGroupsRepository {
     );
   }
 
+  // ---------------- Admin actions ----------------
+
+  /// Invites one more person (they join only after accepting).
+  Future<void> inviteMember(String groupId, String userId) async {
+    await _dio.post(
+      ApiEndpoints.socialGroupMembers(groupId),
+      data: {'user_id': userId},
+    );
+  }
+
+  /// Removes a member. Admin only; the admin cannot remove themselves.
+  Future<void> removeMember(String groupId, String userId) async {
+    await _dio.delete(ApiEndpoints.socialGroupMember(groupId, userId));
+  }
+
+  /// Deletes the whole group and its chat. Admin only.
+  Future<void> deleteGroup(String groupId) async {
+    await _dio.delete(ApiEndpoints.socialGroupDetail(groupId));
+  }
+
   // ---------------- Chat (REST part) ----------------
 
   /// Short-lived token for the social group chat WebSocket.
@@ -138,6 +158,7 @@ final socialGroupLiveRefreshProvider = Provider<void>((ref) {
     'social_group_invitation_accepted',
     'social_group_invitation_declined',
     'social_group_updated',
+    'social_group_deleted',
   };
   final sub = ref.watch(notificationSocketServiceProvider).events.listen((e) {
     if (events.contains(e.event)) {

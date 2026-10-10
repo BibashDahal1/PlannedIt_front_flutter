@@ -11,7 +11,7 @@ import '../../../core/widgets/sketch_button.dart';
 import '../../auth/presentation/auth_controller.dart';
 import '../../groups/data/social_groups_providers.dart';
 import '../../groups/domain/social_group.dart';
-import '../../groups/presentation/social_group_member_tile.dart';
+import '../../groups/presentation/social_group_details_sheet.dart';
 import '../data/chat_providers.dart';
 import '../data/social_chat_socket_service.dart';
 import '../domain/chat_message.dart';
@@ -237,45 +237,15 @@ class _SocialChatScreenState extends ConsumerState<SocialChatScreen> {
     return null;
   }
 
-  void _showMembers(SocialGroup group) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      useSafeArea: true,
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(context).height * 0.7,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  group.name,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    itemCount: group.members.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (_, i) =>
-                        SocialGroupMemberTile(member: group.members[i]),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+  /// Details come from the bottom (same sheet as the Groups screen). If the
+  /// admin deleted the group from there, leave the chat too.
+  Future<void> _showDetails() async {
+    final deleted = await SocialGroupDetailsSheet.show(
+      context,
+      groupId: widget.groupId,
+      showOpenChat: false,
     );
+    if (deleted == true && mounted && context.canPop()) context.pop();
   }
 
   @override
@@ -291,7 +261,7 @@ class _SocialChatScreenState extends ConsumerState<SocialChatScreen> {
           IconButton(
             tooltip: 'Group members',
             icon: const Icon(Icons.more_vert),
-            onPressed: group == null ? null : () => _showMembers(group),
+            onPressed: group == null ? null : _showDetails,
           ),
         ],
       ),
