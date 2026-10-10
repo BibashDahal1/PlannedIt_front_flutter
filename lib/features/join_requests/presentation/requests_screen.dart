@@ -7,30 +7,54 @@ import '../../../core/widgets/sketch_box.dart';
 import '../../../core/widgets/sketch_button.dart';
 import '../../../core/widgets/sketch_icon.dart';
 import '../../activities/data/activities_providers.dart';
+import '../../groups/data/social_groups_providers.dart'; // NEW
+import '../../groups/presentation/social_group_invitations_tab.dart'; // NEW
+import '../data/group_applications.dart'; // NEW
 import '../data/join_requests_providers.dart';
 import '../domain/join_request.dart';
+import 'group_applicants_picker.dart'; // NEW
 
 class RequestsScreen extends ConsumerWidget {
   const RequestsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // NEW: keeps invitations / groups fresh from live notifications.
+    ref.watch(socialGroupLiveRefreshProvider);
+    final inviteCount =
+        ref.watch(socialGroupInvitationsProvider).value?.length ?? 0;
+
     return DefaultTabController(
-      length: 2,
+      length: 3,
       initialIndex: 1,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
           title: const Text('Requests'),
-          bottom: const TabBar(
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'Sent'),
-              Tab(text: 'My Activities'),
+              const Tab(text: 'Sent'),
+              const Tab(text: 'My Activities'),
+              // NEW: group invitations, with a count badge.
+              Tab(
+                child: Badge(
+                  isLabelVisible: inviteCount > 0,
+                  label: Text('$inviteCount'),
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: Text('Invitations'),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
-        body: TabBarView(
-          children: [const _SentRequestsTab(), const MyActivityRequestsTab()],
+        body: const TabBarView(
+          children: [
+            _SentRequestsTab(),
+            MyActivityRequestsTab(),
+            SocialGroupInvitationsTab(),
+          ],
         ),
       ),
     );
@@ -302,12 +326,14 @@ class MyActivityRequestsTab extends ConsumerWidget {
   }
 }
 
-class _RequestTile extends StatelessWidget {
+/// A request I sent. For group applications it also shows the group and the
+/// outcome of each applicant (pending / accepted / not selected).
+class _RequestTile extends ConsumerWidget {
   final JoinRequest request;
   const _RequestTile({required this.request});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final status = switch (request.status) {
       'pending' => 'Pending',
       'accepted' => 'Accepted',
@@ -317,65 +343,96 @@ class _RequestTile extends StatelessWidget {
       _ => request.status,
     };
 
+    // NEW: null for individual requests.
+    final groupApp = ref.watch(groupApplicationProvider(request.id)).value;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: SketchBox(
         seed: request.id.hashCode,
         radius: 18,
         padding: const EdgeInsets.all(14),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SketchBox(
-              seed: request.id.hashCode + 1,
-              radius: 13,
-              width: 48,
-              height: 48,
-              child: const Center(child: SketchIcon('calendar', size: 28)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    request.activityTitle?.isNotEmpty == true
-                        ? request.activityTitle!
-                        : 'Activity',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SketchBox(
+                  seed: request.id.hashCode + 1,
+                  radius: 13,
+                  width: 48,
+                  height: 48,
+                  child: Center(
+                    child: SketchIcon(
+                      groupApp != null ? 'people' : 'calendar',
+                      size: 28,
                     ),
                   ),
-                  if (request.message?.isNotEmpty == true) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      request.message!,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                  SketchBox(
-                    seed: request.status.hashCode,
-                    radius: 12,
-                    fill: null,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    child: Text(
-                      status,
-                      style: TextStyle(
-                        color: SketchColors.ink,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        request.activityTitle?.isNotEmpty == true
+                            ? request.activityTitle!
+                            : 'Activity',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
-                    ),
+                      if (groupApp != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Applied with ${groupApp.groupName}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: SketchColors.inkFaint),
+                        ),
+                      ],
+                      if (request.message?.isNotEmpty == true) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          request.message!,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      SketchBox(
+                        seed: request.status.hashCode,
+                        radius: 12,
+                        fill: null,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        child: Text(
+                          status,
+                          style: TextStyle(
+                            color: SketchColors.ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+            // NEW: each applicant and their outcome (read-only).
+            if (groupApp != null) ...[
+              const SizedBox(height: 12),
+              GroupApplicantsPicker(
+                application: groupApp,
+                spotsRemaining: null,
+                selected: const <String>{},
+                readOnly: true,
+                onToggle: (_) {},
+              ),
+            ],
           ],
         ),
       ),
